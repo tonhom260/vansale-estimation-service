@@ -1,6 +1,32 @@
+'use client'
 import Image from "next/image";
+import { useEffect } from "react";
 
 export default function Home() {
+
+  const getSession = async () => {
+    try {
+      // rewrite next-config
+      const response = await fetch("/api/auth/session", {
+        method: "GET",
+        // 💡 สำคัญ: ต้องใส่บรรทัดนี้เพื่อให้ Browser ยอมส่งคุกกี้ next-auth ติดไปด้วย
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+      console.log("fet")
+      const data = await response.json();
+      console.log(data);
+    } catch (error) {
+      console.error("CORS or Network Error:", error);
+    }
+  };
+
+  useEffect(() => {
+    getSession()
+  }, [])
+
   return (
     <div className="flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black">
       <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
