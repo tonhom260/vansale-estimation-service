@@ -1,6 +1,8 @@
 'use client'
+import getProductList from "@/action/product/get";
+import getUserList, { TUser } from "@/action/user/get";
 import Image from "next/image";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 export default function Home() {
 
@@ -25,6 +27,23 @@ export default function Home() {
 
   useEffect(() => {
     getSession()
+  }, [])
+
+  const [user, setUser] = useState<TUser[]>([])
+  console.log(user)
+
+  async function getUsers() {
+    const user = await getUserList()
+    setUser(user!)
+  }
+  async function getProduct() {
+    console.log("object")
+    const product = await getProductList()
+    console.log(product)
+  }
+  useEffect(() => {
+    getProduct()
+    getUsers()
   }, [])
 
   return (

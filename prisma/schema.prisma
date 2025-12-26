@@ -1,0 +1,913 @@
+generator client {
+  provider   = "prisma-client"
+  output     = "../generated/prisma"
+  engineType = "client"
+}
+
+datasource db {
+  provider = "mysql"
+}
+
+model Account {
+  id                String  @id
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+  User              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId], map: "Account_userId_fkey")
+}
+
+model AssetControl {
+  id                  Int             @id @default(autoincrement())
+  docname             String?
+  custcode            String?
+  category            String?
+  productSellingPrice Float?
+  giveAmount          Int?
+  takeAmount          Int?
+  calculateUnit       Int?
+  currentUnit         Int?
+  imgUrl              String?
+  note                String?
+  transactionType     String?         @default("SELL")
+  name                String?
+  isActive            Boolean?        @default(true)
+  createAt            DateTime?       @default(now())
+  userId              String?
+  productCode         String?         @db.VarChar(100)
+  customerDB          customerDB?     @relation(fields: [custcode], references: [custcode])
+  DocumentFolder      DocumentFolder? @relation(fields: [docname], references: [order_no])
+  product_order       product_order?  @relation(fields: [productCode], references: [product_code1])
+  User                User?           @relation(fields: [userId], references: [id])
+
+  @@index([custcode], map: "AssetControl_custcode_fkey")
+  @@index([docname], map: "AssetControl_docname_fkey")
+  @@index([productCode], map: "AssetControl_productCode_fkey")
+  @@index([userId], map: "AssetControl_userId_fkey")
+}
+
+model AssetList {
+  id        Int       @id @default(autoincrement())
+  assetCode String    @unique
+  assetName String
+  createAt  DateTime? @default(now())
+  assetCost Float?
+  imgUrl    String?
+  isActive  Boolean?  @default(true)
+  category  String?   @default("ASSET")
+  note      String?
+}
+
+model CreditRequest {
+  id                                   Int             @id @default(autoincrement())
+  requestAt                            DateTime?       @default(now())
+  reqUserId                            String?
+  custId                               String?
+  activeUntil                          DateTime?
+  approveById                          String?
+  approveAt                            DateTime?
+  currentCreditStatus                  String?
+  totalCreditAmount                    Float?
+  totalBillCount                       Int?
+  rejectById                           String?
+  rejectedAt                           DateTime?
+  documentFolderId                     Int?
+  note                                 String?         @db.LongText
+  reqReason                            String?
+  reqTopic                             String?
+  User_CreditRequest_approveByIdToUser User?           @relation("CreditRequest_approveByIdToUser", fields: [approveById], references: [id])
+  customerDB                           customerDB?     @relation(fields: [custId], references: [custcode])
+  DocumentFolder                       DocumentFolder? @relation(fields: [documentFolderId], references: [id])
+  User_CreditRequest_rejectByIdToUser  User?           @relation("CreditRequest_rejectByIdToUser", fields: [rejectById], references: [id])
+  User_CreditRequest_reqUserIdToUser   User?           @relation("CreditRequest_reqUserIdToUser", fields: [reqUserId], references: [id])
+
+  @@index([approveById], map: "CreditRequest_approveById_fkey")
+  @@index([custId], map: "CreditRequest_custId_fkey")
+  @@index([documentFolderId], map: "CreditRequest_documentFolderId_fkey")
+  @@index([rejectById], map: "CreditRequest_rejectById_fkey")
+  @@index([reqUserId], map: "CreditRequest_reqUserId_fkey")
+}
+
+model CustomerOrderEstimation {
+  basicPrice          Float?
+  testOrder           Int?
+  itemOrdering        Int?
+  productcode         String
+  productname         String
+  productcategory     CustomerOrderEstimation_productcategory?
+  popularProductOrder Int?
+  suggestedUnits      Float?
+  returnPercent       Float?
+  lastCustOrder       Float?
+  lastBillTotalUnits  Float?
+  diffFromOrder       Float?
+  max                 Float?
+  average             Float?
+  nextOrder           Float?
+  docname             String
+  consistancyOfOrder  String?
+  DocumentDetail      DocumentDetail                           @relation(fields: [docname], references: [orderDocname], onDelete: Cascade)
+
+  @@id([docname, productcode])
+}
+
+model DocumentDetail {
+  orderDocname            String                    @id
+  effectiveDate           DateTime                  @db.Date
+  slmname                 String
+  areacode                String?
+  responsible             String?
+  vehicle                 String?
+  remark                  String?
+  tripname                String?
+  custcode                String?
+  createAt                DateTime?                 @default(now())
+  totalReturnPercentage   Float?
+  netamount               Float?
+  netunits                Float?
+  CustomerOrderEstimation CustomerOrderEstimation[]
+  SellingArea             SellingArea?              @relation(fields: [areacode], references: [areacode])
+  customerDB              customerDB?               @relation(fields: [custcode], references: [custcode])
+  SaleTrip                SaleTrip?                 @relation(fields: [tripname], references: [tripName])
+
+  @@index([areacode], map: "DocumentDetail_areacode_fkey")
+  @@index([custcode], map: "DocumentDetail_custcode_fkey")
+  @@index([tripname], map: "DocumentDetail_tripname_fkey")
+}
+
+model DocumentFolder {
+  id                    Int                                 @id @default(autoincrement())
+  branch_code           Int?
+  order_no              String                              @unique
+  gross_amount          Float?                              @default(0)
+  discount_type         DocumentFolder_discount_type?
+  discount_amount       Float?                              @default(0)
+  net_amount            Float?                              @default(0)
+  bil_loc               String                              @default("0.00,0.00")
+  img_url1              String?
+  img_url2              String?
+  img_url3              String?
+  img_url4              String?
+  note                  String?
+  billType              DocumentFolder_billType?            @default(CASH)
+  salesman_id           Int?
+  saleID                String?
+  created_by_whom       String
+  created_at            DateTime?                           @default(now())
+  isDeleted             Boolean?                            @default(false)
+  deleted_by_whom       String?
+  deleted_on            DateTime?
+  modified_by_whom      String?
+  modified_on           DateTime?
+  due_date              DateTime?
+  paid_date             DateTime?
+  bill_date             DateTime?                           @default(now())
+  custID                String?
+  userId                String
+  sellingArea_code      String?
+  productShippedStatus  DocumentFolder_productShippedStatus @default(WAIT_FOR_SHIP)
+  isCompleted           Boolean                             @default(false)
+  isActive              Boolean                             @default(true)
+  paymentStatus         DocumentFolder_paymentStatus        @default(WAIT_FOR_PAYMENT)
+  uuid                  String?                             @unique
+  payment_amount        Float?                              @default(0)
+  credit_follow_up_note String?                             @db.Text
+  print_receipt_count   Int?                                @default(0)
+  AssetControl          AssetControl[]
+  CreditRequest         CreditRequest[]
+  customerDB            customerDB?                         @relation(fields: [custID], references: [custcode])
+  SellingArea           SellingArea?                        @relation(fields: [sellingArea_code], references: [areacode])
+  User                  User                                @relation(fields: [userId], references: [id])
+  FollowupMessage       FollowupMessage[]
+  History               History[]
+  PaymentTransaction    PaymentTransaction[]
+  customer_transaction  customer_transaction[]
+  returngoods           returngoods[]
+
+  @@index([custID], map: "DocumentFolder_custID_fkey")
+  @@index([sellingArea_code], map: "DocumentFolder_sellingArea_code_fkey")
+  @@index([userId], map: "DocumentFolder_userId_fkey")
+}
+
+model FollowupMessage {
+  id             Int            @id @default(autoincrement())
+  header         String?        @db.Text
+  detail         String?        @db.Text
+  docname        String
+  userId         String
+  createAt       DateTime       @default(now())
+  DocumentFolder DocumentFolder @relation(fields: [docname], references: [order_no])
+  User           User           @relation(fields: [userId], references: [id])
+
+  @@index([docname], map: "FollowupMessage_docname_fkey")
+  @@index([userId], map: "FollowupMessage_userId_fkey")
+}
+
+model Geo_Thailand {
+  TambonID          String
+  TambonThai        String
+  TambonEng         String
+  TambonThaiShort   String
+  TambonEngShort    String
+  DistrictID        String
+  DistrictThai      String
+  DistrictEng       String
+  DistrictThaiShort String
+  DistrictEngShort  String
+  ProvinceID        String
+  ProvinceThai      String
+  ProvinceEng       String
+  Area              String
+  PostCode          String
+  Id                Int    @id @default(autoincrement())
+}
+
+model History {
+  id                 Int               @id @default(autoincrement())
+  productCode        String            @db.VarChar(100)
+  transferDocumentId Int?
+  invAdjDocumentId   Int?
+  documentFolderId   Int?
+  historyDate        DateTime
+  create_at          DateTime          @default(now())
+  incremental        Float?
+  decremental        Float?
+  activity           History_activity  @default(TRADING)
+  beforeAmount       Float?            @default(0)
+  updateAmount       Float?            @default(0)
+  afterAmount        Float?            @default(0)
+  userId             String
+  effect_wh_Id       Int?
+  DocumentFolder     DocumentFolder?   @relation(fields: [documentFolderId], references: [id])
+  Warehouse          Warehouse?        @relation(fields: [effect_wh_Id], references: [id])
+  InvAdjDocument     InvAdjDocument?   @relation(fields: [invAdjDocumentId], references: [id])
+  product_order      product_order     @relation(fields: [productCode], references: [product_code1])
+  TransferDocument   TransferDocument? @relation(fields: [transferDocumentId], references: [id])
+  User               User              @relation(fields: [userId], references: [id])
+
+  @@index([documentFolderId], map: "History_documentFolderId_fkey")
+  @@index([effect_wh_Id], map: "History_effect_wh_Id_fkey")
+  @@index([invAdjDocumentId], map: "History_invAdjDocumentId_fkey")
+  @@index([productCode], map: "History_productCode_fkey")
+  @@index([transferDocumentId], map: "History_transferDocumentId_fkey")
+  @@index([userId], map: "History_userId_fkey")
+}
+
+model InvAdjDocument {
+  id                                        Int                            @id @default(autoincrement())
+  documentId                                String
+  create_at                                 DateTime                       @default(now())
+  warehouseId                               Int
+  userId                                    String
+  approve_user_id                           String?
+  isDelete                                  Boolean?                       @default(false)
+  note                                      String?
+  shippingStatus                            InvAdjDocument_shippingStatus? @default(WAIT_FOR_SHIP)
+  transfered_on                             DateTime?
+  uuid                                      String?                        @unique
+  History                                   History[]
+  User_InvAdjDocument_approve_user_idToUser User?                          @relation("InvAdjDocument_approve_user_idToUser", fields: [approve_user_id], references: [id])
+  User_InvAdjDocument_userIdToUser          User                           @relation("InvAdjDocument_userIdToUser", fields: [userId], references: [id])
+  Warehouse                                 Warehouse                      @relation(fields: [warehouseId], references: [id])
+  TransferTransaction                       TransferTransaction[]
+
+  @@index([approve_user_id], map: "InvAdjDocument_approve_user_id_fkey")
+  @@index([userId], map: "InvAdjDocument_userId_fkey")
+  @@index([warehouseId], map: "InvAdjDocument_warehouseId_fkey")
+}
+
+model MoneyCollection {
+  id                                       Int                  @id @default(autoincrement())
+  createAt                                 DateTime             @default(now())
+  approveAt                                DateTime?
+  approveUserId                            String?
+  createUserId                             String?
+  cancelPaymentBaht                        Float?               @default(0)
+  totalBaht                                Float?               @default(0)
+  note1000                                 Int?                 @default(0)
+  note500                                  Int?                 @default(0)
+  note100                                  Int?                 @default(0)
+  note50                                   Int?                 @default(0)
+  note20                                   Int?                 @default(0)
+  note10                                   Int?                 @default(0)
+  coinsMixedAmount                         Float?               @default(0)
+  otherReasonAmount                        Float?               @default(0)
+  note_explaination                        String?              @db.Text
+  updateAt                                 DateTime?            @default(now())
+  User_MoneyCollection_approveUserIdToUser User?                @relation("MoneyCollection_approveUserIdToUser", fields: [approveUserId], references: [id])
+  User_MoneyCollection_createUserIdToUser  User?                @relation("MoneyCollection_createUserIdToUser", fields: [createUserId], references: [id])
+  PaymentTransaction                       PaymentTransaction[]
+
+  @@index([approveUserId], map: "MoneyCollection_approveUserId_fkey")
+  @@index([createUserId], map: "MoneyCollection_createUserId_fkey")
+}
+
+model MonthlyTarget {
+  id               String      @id
+  targetBaht       Float?      @default(0)
+  targetUnits      Float?      @default(0)
+  areacode         String
+  month            String?
+  returnPercentage Float?      @default(0.03)
+  SellingArea      SellingArea @relation(fields: [areacode], references: [areacode])
+
+  @@index([areacode], map: "MonthlyTarget_areacode_fkey")
+}
+
+model PaymentTransaction {
+  id                                              Int                             @id @default(autoincrement())
+  company_id                                      String?
+  branch_code                                     String?
+  documentFolderId                                Int?
+  paymentType                                     PaymentTransaction_paymentType? @default(CASH)
+  pmt_amount                                      Float                           @default(0)
+  paid_at                                         DateTime?                       @default(now())
+  paid_by                                         String?
+  note                                            String?                         @db.Text
+  ref_number                                      String?
+  is_audit                                        Boolean?                        @default(false)
+  userId                                          String
+  image_0                                         String?                         @db.LongText
+  location                                        String?
+  deleted                                         Boolean?                        @default(false)
+  deleted_on                                      DateTime?
+  deleteUserId                                    String?
+  modified_on                                     DateTime?
+  modifyUserId                                    String?
+  bankName                                        String?
+  bankNumber                                      String?
+  chequeNumber                                    String?
+  reference1                                      String?
+  reference2                                      String?
+  collectCashUserId                               String?
+  collect_money_at                                DateTime?
+  isCollected                                     Boolean?                        @default(false)
+  isVerified                                      Boolean?                        @default(false)
+  moneyCollectionId                               Int?
+  verifiedAt                                      DateTime?
+  verifyUserId                                    String?
+  User_PaymentTransaction_collectCashUserIdToUser User?                           @relation("PaymentTransaction_collectCashUserIdToUser", fields: [collectCashUserId], references: [id])
+  User_PaymentTransaction_deleteUserIdToUser      User?                           @relation("PaymentTransaction_deleteUserIdToUser", fields: [deleteUserId], references: [id])
+  DocumentFolder                                  DocumentFolder?                 @relation(fields: [documentFolderId], references: [id])
+  User_PaymentTransaction_modifyUserIdToUser      User?                           @relation("PaymentTransaction_modifyUserIdToUser", fields: [modifyUserId], references: [id])
+  MoneyCollection                                 MoneyCollection?                @relation(fields: [moneyCollectionId], references: [id])
+  User_PaymentTransaction_userIdToUser            User                            @relation("PaymentTransaction_userIdToUser", fields: [userId], references: [id])
+  User_PaymentTransaction_verifyUserIdToUser      User?                           @relation("PaymentTransaction_verifyUserIdToUser", fields: [verifyUserId], references: [id])
+  requestQRpayment                                requestQRpayment[]
+
+  @@index([collectCashUserId], map: "PaymentTransaction_collectCashUserId_fkey")
+  @@index([deleteUserId], map: "PaymentTransaction_deleteUserId_fkey")
+  @@index([documentFolderId], map: "PaymentTransaction_documentFolderId_fkey")
+  @@index([modifyUserId], map: "PaymentTransaction_modifyUserId_fkey")
+  @@index([moneyCollectionId, verifiedAt])
+  @@index([userId], map: "PaymentTransaction_userId_fkey")
+  @@index([verifyUserId], map: "PaymentTransaction_verifyUserId_fkey")
+}
+
+model PriceBook {
+  id                               Int                                @id @default(autoincrement())
+  pricebook_name                   String                             @unique
+  pricebook_code                   String                             @unique
+  company_id                       Int?
+  note                             String?
+  ProductOrderOnPriceBooksExplicit ProductOrderOnPriceBooksExplicit[]
+  customerDB                       customerDB[]
+}
+
+model ProductOrderOnPriceBooksExplicit {
+  product_code  String        @db.VarChar(100)
+  priceBookId   Int
+  sellingPrice  Float
+  create_at     DateTime      @default(now())
+  update_at     DateTime?
+  PriceBook     PriceBook     @relation(fields: [priceBookId], references: [id])
+  product_order product_order @relation(fields: [product_code], references: [product_code1])
+
+  @@id([product_code, priceBookId])
+  @@index([priceBookId], map: "ProductOrderOnPriceBooksExplicit_priceBookId_fkey")
+}
+
+model ReportByMonth {
+  Month_Year      String      @id
+  AllTeamTgUnits  Float?
+  AllTeamTgBaht   Float?
+  Note            String?
+  OishiWorkingDay Int?
+  KitzWorkingDay  Int?
+  TeamTgSet       TeamTgSet[]
+}
+
+model ReportDetail {
+  id                  Int                @id @default(autoincrement())
+  reportNoteAndDetail String
+  startDate           DateTime?
+  endDate             DateTime?
+  createAt            DateTime?          @default(now())
+  updateAt            DateTime?
+  updateBy            String?
+  isActive            Boolean?           @default(true)
+  SaleTripWithDate    SaleTripWithDate[]
+}
+
+model ReportTripInfo {
+  id                  Int               @id @default(autoincrement())
+  startDate           DateTime?
+  endDate             DateTime?
+  saleTripWithDateId  Int?
+  saleResponsibleName String?
+  mainDriverName      String?
+  secondaryDriverName String?
+  saleAssistName      String?
+  gasolineCost        Float?
+  gasolineLiter       Float?
+  manPowerCost        Float?
+  manPowerUnit        Int?
+  vehicleDetail       String?
+  distanceKM          Float?
+  SaleTripWithDate    SaleTripWithDate? @relation(fields: [saleTripWithDateId], references: [id])
+
+  @@index([saleTripWithDateId], map: "ReportTripInfo_saleTripWithDateId_fkey")
+}
+
+model SaleTrip {
+  tripName         String                   @unique
+  tripCode         String                   @id
+  slmname          String
+  note             String?
+  isActive         Boolean
+  daysOfWeek       String?
+  visitCount       Int
+  member           String?                  @db.VarChar(2000)
+  createAt         DateTime                 @default(now())
+  originWarehouse  SaleTrip_originWarehouse @default(KK)
+  reportDetailId   Int?
+  DocumentDetail   DocumentDetail[]
+  SaleTripWithDate SaleTripWithDate[]
+  customerDB       customerDB[]
+}
+
+model SaleTripWithDate {
+  id               Int              @id @default(autoincrement())
+  saleTripTripCode String?
+  dateRangeJson    String?          @db.LongText
+  reportDetailId   Int?
+  ReportTripInfo   ReportTripInfo[]
+  ReportDetail     ReportDetail?    @relation(fields: [reportDetailId], references: [id])
+  SaleTrip         SaleTrip?        @relation(fields: [saleTripTripCode], references: [tripCode])
+
+  @@index([reportDetailId], map: "SaleTripWithDate_reportDetailId_fkey")
+  @@index([saleTripTripCode], map: "SaleTripWithDate_saleTripTripCode_fkey")
+}
+
+model SellingArea {
+  areacode            String            @id
+  areaname            String
+  sale_responsibleFor String?
+  serviceArea         String?
+  note                String?
+  team                SellingArea_team?
+  DocumentDetail      DocumentDetail[]
+  DocumentFolder      DocumentFolder[]
+  MonthlyTarget       MonthlyTarget[]
+  TeamTgSet           TeamTgSet[]
+  User                User[]
+}
+
+model Session {
+  id           String   @id
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  User         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId], map: "Session_userId_fkey")
+}
+
+model TeamTgSet {
+  month_year      String
+  slmname         String
+  EachTeamTgUnits Float?
+  EachTeamTgBaht  Float?
+  TeamWorkingDay  Int?
+  Note            String?
+  ReportByMonth   ReportByMonth @relation(fields: [month_year], references: [Month_Year])
+  SellingArea     SellingArea   @relation(fields: [slmname], references: [areacode])
+
+  @@id([month_year, slmname])
+  @@index([slmname], map: "TeamTgSet_slmname_fkey")
+}
+
+model TransferDocument {
+  id                                                    Int                              @id @default(autoincrement())
+  documentId                                            String
+  isActive                                              Boolean?                         @default(true)
+  create_at                                             DateTime                         @default(now())
+  modified_on                                           DateTime
+  warehouseIdFrom                                       Int
+  warehouseIdTo                                         Int
+  transfered_on                                         DateTime?
+  note                                                  String?
+  create_user_id                                        String?
+  modified_by                                           String?
+  uuid                                                  String?                          @unique
+  shippingStatus                                        TransferDocument_shippingStatus? @default(WAIT_FOR_SHIP)
+  transfer_user_id                                      String?
+  allow_transfered_on                                   DateTime?
+  get_estmation_data_on                                 DateTime?
+  get_stock_data_on                                     DateTime?
+  History                                               History[]
+  User_TransferDocument_create_user_idToUser            User?                            @relation("TransferDocument_create_user_idToUser", fields: [create_user_id], references: [id])
+  User_TransferDocument_transfer_user_idToUser          User?                            @relation("TransferDocument_transfer_user_idToUser", fields: [transfer_user_id], references: [id])
+  Warehouse_TransferDocument_warehouseIdFromToWarehouse Warehouse                        @relation("TransferDocument_warehouseIdFromToWarehouse", fields: [warehouseIdFrom], references: [id])
+  Warehouse_TransferDocument_warehouseIdToToWarehouse   Warehouse                        @relation("TransferDocument_warehouseIdToToWarehouse", fields: [warehouseIdTo], references: [id])
+  TransferTransaction                                   TransferTransaction[]
+
+  @@index([create_user_id], map: "TransferDocument_create_user_id_fkey")
+  @@index([transfer_user_id], map: "TransferDocument_transfer_user_id_fkey")
+  @@index([warehouseIdFrom], map: "TransferDocument_warehouseIdFrom_fkey")
+  @@index([warehouseIdTo], map: "TransferDocument_warehouseIdTo_fkey")
+}
+
+model TransferTransaction {
+  id                 Int               @id @default(autoincrement())
+  transferDocumentId Int?
+  productCode        String            @db.VarChar(100)
+  unit_amount        Float?            @default(0)
+  invAdjDocumentId   Int?
+  isTransfered       Boolean           @default(false)
+  offset_unit_amount Float?            @default(0)
+  est_amount         Float?            @default(0)
+  remain_amount      Float?            @default(0)
+  InvAdjDocument     InvAdjDocument?   @relation(fields: [invAdjDocumentId], references: [id])
+  product_order      product_order     @relation(fields: [productCode], references: [product_code1])
+  TransferDocument   TransferDocument? @relation(fields: [transferDocumentId], references: [id])
+
+  @@index([invAdjDocumentId], map: "TransferTransaction_invAdjDocumentId_fkey")
+  @@index([productCode], map: "TransferTransaction_productCode_fkey")
+  @@index([transferDocumentId], map: "TransferTransaction_transferDocumentId_fkey")
+}
+
+model User {
+  id                                                            String               @id
+  name                                                          String?              @unique
+  email                                                         String?              @unique
+  emailVerified                                                 DateTime?
+  image                                                         String?
+  password                                                      String?
+  role                                                          String?
+  return_warehouseId                                            Int?                 @unique
+  sale_warehouseId                                              Int?                 @unique
+  session_token                                                 String?
+  dev_mac_addr                                                  String?
+  fullname                                                      String?
+  isActive                                                      Boolean?             @default(true)
+  latest_connect                                                DateTime?
+  licent_plate                                                  String?
+  phone_number                                                  String?
+  surname                                                       String?
+  area_code                                                     String?
+  Account                                                       Account[]
+  AssetControl                                                  AssetControl[]
+  CreditRequest_CreditRequest_approveByIdToUser                 CreditRequest[]      @relation("CreditRequest_approveByIdToUser")
+  CreditRequest_CreditRequest_rejectByIdToUser                  CreditRequest[]      @relation("CreditRequest_rejectByIdToUser")
+  CreditRequest_CreditRequest_reqUserIdToUser                   CreditRequest[]      @relation("CreditRequest_reqUserIdToUser")
+  DocumentFolder                                                DocumentFolder[]
+  FollowupMessage                                               FollowupMessage[]
+  History                                                       History[]
+  InvAdjDocument_InvAdjDocument_approve_user_idToUser           InvAdjDocument[]     @relation("InvAdjDocument_approve_user_idToUser")
+  InvAdjDocument_InvAdjDocument_userIdToUser                    InvAdjDocument[]     @relation("InvAdjDocument_userIdToUser")
+  MoneyCollection_MoneyCollection_approveUserIdToUser           MoneyCollection[]    @relation("MoneyCollection_approveUserIdToUser")
+  MoneyCollection_MoneyCollection_createUserIdToUser            MoneyCollection[]    @relation("MoneyCollection_createUserIdToUser")
+  PaymentTransaction_PaymentTransaction_collectCashUserIdToUser PaymentTransaction[] @relation("PaymentTransaction_collectCashUserIdToUser")
+  PaymentTransaction_PaymentTransaction_deleteUserIdToUser      PaymentTransaction[] @relation("PaymentTransaction_deleteUserIdToUser")
+  PaymentTransaction_PaymentTransaction_modifyUserIdToUser      PaymentTransaction[] @relation("PaymentTransaction_modifyUserIdToUser")
+  PaymentTransaction_PaymentTransaction_userIdToUser            PaymentTransaction[] @relation("PaymentTransaction_userIdToUser")
+  PaymentTransaction_PaymentTransaction_verifyUserIdToUser      PaymentTransaction[] @relation("PaymentTransaction_verifyUserIdToUser")
+  Session                                                       Session[]
+  TransferDocument_TransferDocument_create_user_idToUser        TransferDocument[]   @relation("TransferDocument_create_user_idToUser")
+  TransferDocument_TransferDocument_transfer_user_idToUser      TransferDocument[]   @relation("TransferDocument_transfer_user_idToUser")
+  SellingArea                                                   SellingArea?         @relation(fields: [area_code], references: [areacode])
+  Warehouse_User_return_warehouseIdToWarehouse                  Warehouse?           @relation("User_return_warehouseIdToWarehouse", fields: [return_warehouseId], references: [id])
+  Warehouse_User_sale_warehouseIdToWarehouse                    Warehouse?           @relation("User_sale_warehouseIdToWarehouse", fields: [sale_warehouseId], references: [id])
+  customerCheckin                                               customerCheckin[]
+  polylineList                                                  polylineList[]
+
+  @@index([area_code], map: "User_area_code_fkey")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+model Warehouse {
+  id                                                           Int                       @id @default(autoincrement())
+  code                                                         String                    @unique
+  wh_name                                                      String                    @unique
+  wh_type                                                      Warehouse_wh_type         @default(SALE)
+  note                                                         String?
+  branchId                                                     Int?
+  isActive                                                     Boolean?                  @default(true)
+  isDeleted                                                    Boolean?                  @default(false)
+  History                                                      History[]
+  InvAdjDocument                                               InvAdjDocument[]
+  TransferDocument_TransferDocument_warehouseIdFromToWarehouse TransferDocument[]        @relation("TransferDocument_warehouseIdFromToWarehouse")
+  TransferDocument_TransferDocument_warehouseIdToToWarehouse   TransferDocument[]        @relation("TransferDocument_warehouseIdToToWarehouse")
+  User_User_return_warehouseIdToWarehouse                      User?                     @relation("User_return_warehouseIdToWarehouse")
+  User_User_sale_warehouseIdToWarehouse                        User?                     @relation("User_sale_warehouseIdToWarehouse")
+  WarehouseOnProductOrder                                      WarehouseOnProductOrder[]
+}
+
+model WarehouseOnProductOrder {
+  lastestAmt    Float         @default(0)
+  lastestUpdate DateTime      @default(now())
+  p_code        String        @db.VarChar(100)
+  warehouseId   Int
+  product_order product_order @relation(fields: [p_code], references: [product_code1])
+  Warehouse     Warehouse     @relation(fields: [warehouseId], references: [id])
+
+  @@id([warehouseId, p_code])
+  @@index([p_code], map: "WarehouseOnProductOrder_p_code_fkey")
+}
+
+model customerCheckin {
+  id               Int        @id @default(autoincrement())
+  updateAt         DateTime   @default(now())
+  objective        String?    @default("เสนอขายสินค้า")
+  custID           String
+  carMileage       String?
+  location         String?
+  recordLocationAt DateTime?
+  upload_path      String?    @db.VarChar(2000)
+  note             String?    @db.VarChar(2000)
+  recordUserName   String?
+  customerDB       customerDB @relation(fields: [custID], references: [custcode])
+  User             User?      @relation(fields: [recordUserName], references: [name])
+
+  @@index([custID], map: "customerCheckin_custID_fkey")
+  @@index([recordUserName], map: "customerCheckin_recordUserName_fkey")
+}
+
+model customerDB {
+  custname        String
+  contact         String?
+  addr            String?
+  subdistrict     String?
+  district        String?
+  province        String?
+  country         String?
+  phone           String?
+  location        String?
+  taxid           String?
+  slmname         String?
+  create_at       DateTime          @default(now()) @db.Timestamp(0)
+  note            String?
+  group           String?
+  custcode        String            @id
+  tripName        String?
+  creditLimit     Float?
+  creditTerm      String?           @default("สด")
+  isActive        Boolean           @default(true)
+  areacode        String?
+  priceBookId     Int?              @default(1)
+  AssetControl    AssetControl[]
+  CreditRequest   CreditRequest[]
+  DocumentDetail  DocumentDetail[]
+  DocumentFolder  DocumentFolder[]
+  customerCheckin customerCheckin[]
+  PriceBook       PriceBook?        @relation(fields: [priceBookId], references: [id])
+  SaleTrip        SaleTrip[]
+
+  @@index([priceBookId], map: "customerDB_priceBookId_fkey")
+}
+
+model customer_transaction {
+  report_no                  String?         @db.VarChar(100)
+  custcode                   String          @db.VarChar(100)
+  custname                   String          @db.VarChar(100)
+  return_percent             Float?          @db.Float
+  product_code1              String          @db.VarChar(100)
+  product_name               String          @db.VarChar(100)
+  docdate                    DateTime        @db.Date
+  docname                    String          @db.VarChar(100)
+  pmt_type                   String?         @db.VarChar(100)
+  sale_units                 Float?          @default(0.00) @db.Float
+  free_units                 Float?          @default(0.00) @db.Float
+  unit                       String?         @default("ชิ้น") @db.VarChar(100)
+  unitprice                  Float           @db.Float
+  amt                        Float?          @default(0.00) @db.Float
+  discamt                    Float?          @default(0.00) @db.Float
+  netamt                     Float?          @default(0.00) @db.Float
+  branch                     String?         @default("สำนักงานใหญ่") @db.VarChar(100)
+  slmcode                    String          @db.VarChar(100)
+  slmname                    String          @db.VarChar(100)
+  ret_unit                   Float?          @default(0.00) @db.Float
+  ret_amt                    Float?          @default(0.00) @db.Float
+  auto_id                    Int             @unique(map: "auto_id") @default(autoincrement())
+  create_at                  DateTime        @default(now()) @db.Timestamp(0)
+  key_name                   String          @id @default(dbgenerated("(concat(`docname`,' ',`product_code1`))")) @db.VarChar(100)
+  product_orderProduct_code1 String?         @db.VarChar(100)
+  month                      String?
+  week                       String?
+  documentFolderId           Int?
+  isActive                   Boolean?        @default(true)
+  DocumentFolder             DocumentFolder? @relation(fields: [documentFolderId], references: [id])
+  product_order              product_order   @relation(fields: [product_code1], references: [product_code1])
+
+  @@index([docdate, key_name, product_code1, custcode, slmname, isActive])
+  @@index([documentFolderId], map: "customer_transaction_documentFolderId_fkey")
+  @@index([product_code1], map: "customer_transaction_product_code1_fkey")
+}
+
+model polylineList {
+  id         Int      @id @default(autoincrement())
+  createAt   DateTime @default(now())
+  updateAt   DateTime
+  jsonString String   @db.LongText
+  userId     String?
+  User       User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId], map: "polylineList_userId_fkey")
+}
+
+model product_order {
+  product_code1                    String                             @id @db.VarChar(100)
+  product_name                     String?                            @db.VarChar(200)
+  order_in_report                  Int?                               @default(200)
+  basicPrice                       Float?
+  isActive                         Boolean?                           @default(true)
+  isPromoted                       Boolean?                           @default(false)
+  note                             String?
+  order_in_bill                    Int?
+  order_option                     Int?
+  productcategory                  product_order_productcategory?
+  create_at                        DateTime?                          @default(now()) @db.Timestamp(0)
+  popularByMonth                   Int?
+  barcode                          String?
+  img_url                          String?
+  AssetControl                     AssetControl[]
+  History                          History[]
+  ProductOrderOnPriceBooksExplicit ProductOrderOnPriceBooksExplicit[]
+  TransferTransaction              TransferTransaction[]
+  WarehouseOnProductOrder          WarehouseOnProductOrder[]
+  customer_transaction             customer_transaction[]
+  returngoods                      returngoods[]
+}
+
+model reportPreset {
+  report_type    String?  @default("sale_analysis_weekly_monthly") @db.VarChar(100)
+  areaPreset     String?  @db.LongText
+  customerPreset String?  @db.LongText
+  presetName     String   @id
+  user           String?  @default("No User defined")
+  create_at      DateTime @default(now()) @db.Timestamp(0)
+}
+
+model requestQRpayment {
+  id                   Int                 @id @default(autoincrement())
+  documentId           Int?
+  paymentTransactionId Int?
+  requestBy            String?
+  requestAt            DateTime?
+  paidAt               DateTime?
+  responseJson         String?             @db.LongText
+  paidAmount           Float?
+  transactionXClient   String?
+  fromAccountNo        String?
+  rejectAt             DateTime?
+  PaymentTransaction   PaymentTransaction? @relation(fields: [paymentTransactionId], references: [id])
+
+  @@index([paymentTransactionId], map: "requestQRpayment_paymentTransactionId_fkey")
+}
+
+model returngoods {
+  custcode                   String?         @db.VarChar(100)
+  custname                   String?         @db.VarChar(100)
+  product_code1              String          @db.VarChar(100)
+  product_name               String          @db.VarChar(100)
+  docdate                    DateTime        @db.Date
+  docname                    String          @db.VarChar(100)
+  unitprice                  Float           @db.Float
+  slmcode                    String          @db.VarChar(100)
+  slmname                    String?         @db.VarChar(100)
+  ret_unit                   Float?          @default(0) @db.Float
+  auto_id                    Int             @id @default(autoincrement())
+  create_at                  DateTime        @default(now()) @db.Timestamp(0)
+  key_name                   String?         @unique @default(dbgenerated("(concat(`docname`,' ',`product_code1`))")) @db.VarChar(100)
+  product_orderProduct_code1 String?         @db.VarChar(100)
+  month                      String?
+  net_return_amt             Float?
+  week                       String?
+  documentFolderId           Int?
+  isActive                   Boolean?        @default(true)
+  DocumentFolder             DocumentFolder? @relation(fields: [documentFolderId], references: [id])
+  product_order              product_order?  @relation(fields: [product_orderProduct_code1], references: [product_code1])
+
+  @@index([documentFolderId], map: "returngoods_documentFolderId_fkey")
+  @@index([product_orderProduct_code1], map: "returngoods_product_orderProduct_code1_fkey")
+  @@index([slmname, docdate, key_name, product_code1, custcode, isActive])
+}
+
+enum Warehouse_wh_type {
+  SALE
+  RETURN
+  MANUFACTURE
+}
+
+enum DocumentFolder_discount_type {
+  PERCENTAGE_DC
+  BAHT_DC
+}
+
+enum PaymentTransaction_paymentType {
+  CASH
+  CREDITCARD
+  QR
+  TRANSFER
+}
+
+enum CustomerOrderEstimation_productcategory {
+  OISHI_MAN
+  OISHI_TRADE
+  KITZ_MAN
+  KITZTRADE
+  DRINKPRODUCT
+  KITZ_LOAF
+  OISHI_LOAF
+  ASSET
+  WASTE
+  SPECIALPRODUCT
+}
+
+enum SellingArea_team {
+  OISHI
+  KITZ
+}
+
+enum InvAdjDocument_shippingStatus {
+  SHIPPED
+  WAIT_FOR_SHIP
+  CANCELLED
+}
+
+enum product_order_productcategory {
+  OISHI_MAN
+  OISHI_TRADE
+  KITZ_MAN
+  KITZTRADE
+  DRINKPRODUCT
+  KITZ_LOAF
+  OISHI_LOAF
+  ASSET
+  WASTE
+  SPECIALPRODUCT
+}
+
+enum SaleTrip_originWarehouse {
+  KK
+  UD
+}
+
+enum History_activity {
+  TRADING
+  ADJUSTMENT
+  TRANSFER
+  REJECT
+}
+
+enum TransferDocument_shippingStatus {
+  SHIPPED
+  WAIT_FOR_SHIP
+  CANCELLED
+}
+
+enum DocumentFolder_billType {
+  CASH
+  CREDIT
+}
+
+enum DocumentFolder_productShippedStatus {
+  SHIPPED
+  WAIT_FOR_SHIP
+  CANCELLED
+}
+
+enum DocumentFolder_paymentStatus {
+  CANCELLED
+  WAIT_FOR_PAYMENT
+  WAIT_FOR_CHECK
+  DONE
+}
