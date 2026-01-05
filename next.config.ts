@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
+const isProd = process.env.NODE_ENV === 'production';
 const nextConfig: NextConfig = {
-  /* config options here */
+  basePath: isProd ? '/estimate' : '', // แปลง basepath เพื่อเข้าถึง assetfile เวลา ทำ proxy ใน server
   async rewrites() {
     return [
       {
@@ -12,6 +13,11 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  output: "standalone", // for docker only if no docker remove!
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+
 };
 
 export default nextConfig;

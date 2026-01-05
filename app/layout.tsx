@@ -1,21 +1,16 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, IBM_Plex_Sans_Thai } from "next/font/google";
 import "./globals.css";
+import { AppRouterCacheProvider } from '@mui/material-nextjs/v15-appRouter';
+import { theme } from "@/lib/theme";
+import { ThemeProvider } from "@mui/material/styles";
 
-// const geistSans = Geist({
-//   variable: "--font-geist-sans",
-//   subsets: ["latin"],
-// });
+
 const ibmSans = IBM_Plex_Sans_Thai({
   variable: "--font-ibm-sans",
   subsets: ["thai", "latin"],
   weight: ["100", "200", "300", "400", "500", "600", "700"]
 });
-
-// const geistMono = Geist_Mono({
-//   variable: "--font-geist-mono",
-//   subsets: ["latin"],
-// });
 
 export const metadata: Metadata = {
   title: "Create Next App",
@@ -32,9 +27,13 @@ export default function RootLayout({
       <body
         suppressHydrationWarning
         // className={`${geistSans.variable} ${geistMono.variable} ${ibmSans.variable} antialiased`}
-        className={`${ibmSans.className} antialiased`}
+        className={`${ibmSans.className} antialiased w-screen h-screen`}
       >
-        {children}
+        <AppRouterCacheProvider options={{ key: 'css' }}>
+          <ThemeProvider theme={theme}>
+            {children}
+          </ThemeProvider>
+        </AppRouterCacheProvider>
       </body>
     </html>
   );
