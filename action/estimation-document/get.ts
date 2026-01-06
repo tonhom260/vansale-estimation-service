@@ -4,26 +4,18 @@ import { Prisma } from "@/generated/prisma/client"
 import prisma from "@/lib/prisma"
 export type TEstDoc = Prisma.DocumentDetailGetPayload<{
     include: {
-        customerDB: { select: { custname: true } }
+        customerDB: { select: { custname: true } },
+        CustomerOrderEstimation: true,
     }
 }>
 
 
 export async function getEstimationDocument() {
     try {
-
         const orderPlanByCust = await prisma.documentDetail.findMany({
             include: { customerDB: { select: { custname: true } } },
-            // include: { customerDB: { include: { PriceBook: { include: { ProductOrderOnPriceBooksExplicit: true } } } } },
             orderBy: { createAt: 'desc' },
             take: 40,
-            // where: {
-            //     areacode: areacode as string,
-            //     effectiveDate: {
-            //         gte: new Date(start_date as string),
-            //         lt: end_date
-            //     }
-            // }
         })
         // console.log(orderPlanByCust)
 
@@ -51,11 +43,15 @@ export async function getEstimationDocumentByDateAndSale({ startTripDate, team }
         return orderPlanByCust
     } catch (e) { console.log(e) }
 }
+
 export async function getEstimationDocumentByCustId({ custId }: { custId: string }) {
     try {
 
         const orderPlanByCust = await prisma.documentDetail.findMany({
-            include: { customerDB: { select: { custname: true } } },
+            include: {
+                CustomerOrderEstimation: true,
+                customerDB: { select: { custname: true } }
+            },
             orderBy: { createAt: 'desc' },
             take: 40,
             where: {

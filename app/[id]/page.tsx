@@ -1,13 +1,12 @@
 'use client'
-import { PiNotebookDuotone } from "react-icons/pi";
 import { GrDocumentExcel } from "react-icons/gr";
 import { IoCloudDownloadOutline } from "react-icons/io5";
 import { HiMiniMagnifyingGlass, HiOutlineTrash, HiXMark } from "react-icons/hi2";
 import getProductList from "@/action/product/get";
 import getUserList, { TUser } from "@/action/user/get";
-import { Ref, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useFieldArray, useForm, UseFormReturn } from "react-hook-form";
-import { Prisma, product_order } from "@/generated/prisma/client"
+import { product_order } from "@/generated/prisma/client"
 import TextField from '@mui/material/TextField';
 import colors from 'tailwindcss/colors'
 import { useLocalStorage } from 'usehooks-ts'
@@ -221,9 +220,9 @@ export default function EstimationInput() {
 
   const selectedList = useMemo(() => {
     return watch("filterProduct")?.filter((e, i) => {
-      console.log(e.input)
-      console.log(e)
-      console.log(mainPick)
+      // console.log(e.input)
+      // console.log(e)
+      // console.log(mainPick)
       const itemCat = e.productcategory ?? ""
       const acceptMainCat = catList.filter(e => e.includes(mainPick))
       if (!acceptMainCat.includes(itemCat)) {
@@ -232,35 +231,35 @@ export default function EstimationInput() {
       }
 
       const mainFilterCheck = itemCat == acceptMainCat!.at(selectIndex)!
-      console.log(mainFilterCheck)
+      // console.log(mainFilterCheck)
       if (!mainFilterCheck) {
-        console.log(i)
+        // console.log(i)
         return false
       }
       console.log("object")
       if (!!watch("queryId")) {
-        console.log(i)
+        // console.log(i)
         const productCode = e.product_code1
         if (!productCode.includes(watch("queryId"))) {
           return false
         }
       }
       if (!!watch("queryName")) {
-        console.log(i)
+        // console.log(i)
         const productName = e.product_name ?? ""
         if (!productName.includes(watch("queryName"))) {
           return false
         }
       }
       if (!!watch("queryUnitPrice")) {
-        console.log(i)
+        // console.log(i)
         const productUnitPrice = e.basicPrice ?? ""
         if (!productUnitPrice?.toString()?.includes(watch("queryUnitPrice"))) {
           return false
         }
       }
       if (!!watch("queryValue")) {
-        console.log(watch("queryValue"))
+        // console.log(watch("queryValue"))
         const inputValue = e.input ?? ""
         if (!!inputValue) { console.log(inputValue) }
         console.log(inputValue)
@@ -268,7 +267,6 @@ export default function EstimationInput() {
           return false
         }
       }
-      console.log("pass")
       return true
     })
   }, [
@@ -287,7 +285,6 @@ export default function EstimationInput() {
     const len = filterCatList.length
     // console.log(catlistNumber)
     if (!len || len == 0) return
-
     const handleKeyDown = (e: KeyboardEvent) => {
       if (!e.shiftKey) return;
       // const firstId = selectedList.at(0)?.product_code1
@@ -300,7 +297,6 @@ export default function EstimationInput() {
       }
     };
     window.addEventListener("keydown", handleKeyDown);
-
     // ✅ Cleanup function: ลบ listener เมื่อ component unmount หรือ render ใหม่
     return () => window.removeEventListener("keydown", handleKeyDown);
     // }, [catList, selectedList]); // [] ตรวจสอบให้แน่ใจว่ารันแค่ครั้งเดียวตอน mount
@@ -370,16 +366,46 @@ export default function EstimationInput() {
   useEffect(() => {
     setIsMounted(true);
   }, []);
+
   const headerUnit = isMounted ? (measure[mainPick] == "group" ? "หิ้ว" : "ชิ้น") : "ชิ้น";
-  // console.log(headerUnit)
 
   const [analysisView, setAnalysisView] = useState(false)
-  !!report?.effectiveDate && console.log(format(report?.effectiveDate!, "dd-MM-yyyy"))
-  // console.log(report?.effectiveDate)
-  console.log(report?.CustomerOrderEstimation)
+
+  async function pickupCloudData(docId: string, type: "estimation" | "past-record") {
+    console.log(docId)
+    switch (type) {
+      case "estimation": {
+        console.log("est")
+        try {
+          await convertCloudEstDataToInput()
+          setOpenCloud(false)
+        } catch (e) { console.log(e) }
+      }
+        break
+      case "past-record": {
+        console.log("past data")
+        try {
+          await convertCloudHistoryDataToInput()
+          setOpenCloud(false)
+        } catch (e) { console.log(e) }
+      }
+        break
+    }
+  }
+
+  async function convertCloudHistoryDataToInput() {
+    // ดึงข้อมูล มาลงช่องและ last save
+    // เพิ่ม tag เอกสารล่าสุด
+  }
+
+  async function convertCloudEstDataToInput() {
+    // ดึงข้อมูล มาลงช่องและ last save
+    // เพิ่ม tag เอกสารล่าสุด
+  }
+
   return (
     <div className=" 2xl:flex min-h-screen items-start justify-center bg-zinc-50 text-black font-medium overflow-hidden pl-4">
-      {openCloud && <DialogPullDataOnCloud onClose={() => { setOpenCloud(false) }} submitFn={() => { }} />}
+      {openCloud && <DialogPullDataOnCloud custId={report!.custcode!} onClose={() => { setOpenCloud(false) }} submitFn={pickupCloudData} />}
       <main className="flex flex-col min-h-screen w-full h-full   items-center   sm:items-start p-8 pt-4 ">
         <div className="w-full h-20 pl-3 ">
           <div className="flex justify-between items-start">
@@ -388,16 +414,16 @@ export default function EstimationInput() {
               <div className="text-3xl">{report?.customerDB?.custname ?? "-"}</div>
             </div>
             <div className="border-2 rounded-xl border-gray-300 flex">
-              <div className="w-75 p-2 border-r border-gray-300 text-center">
-                <div className="text-gray-600 text-xl text-center">{report?.SaleTrip?.tripName ?? "สายขาย"}</div>
+              <div className=" min-w-50 p-2 border-r border-gray-300 text-center">
+                <div className="text-gray-600 text-xl text-center">{report?.SaleTrip?.tripName ?? "ผู้เข้าบริการ"}</div>
                 <div className="font-bold">{report?.slmname ?? "-"}</div>
               </div>
-              <div className="w-75 p-2 text-center">
+              <div className="min-w-50 p-2 text-center">
                 <div className="text-gray-600 text-xl">วันที่ทำประมาณการ</div>
                 <div className="font-bold">{!!report?.effectiveDate ? format(report?.effectiveDate!, "dd-MM-yyyy") : ""}</div>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex gap-2 min-w-80">
               <div onClick={() => { setOpenCloud(true) }} className="hover:cursor-pointer p-3 border-gray-600 border rounded-xl flex items-center">
                 <IoCloudDownloadOutline />
                 <span className="ml-2">
@@ -733,10 +759,10 @@ function Header2({ mainPick, register, setValue, headerUnit, data }: { data?: TP
   return (
     <thead className={`rounded-xl w-full sticky top-0 ${mainPick == "OISHI" ? "bg-[#e7000b] text-white" : "bg-orange-500"} `} >
       <tr className='h-10  w-full text-[12px] 2xl:text-[16px] '>
-        <th className='pl-4  px-2 text-start  rounded-tl-xl font-[400] w-[130px] '>
+        <th className='pl-4  px-2 text-start  rounded-tl-xl font-normal w-32.5 '>
           <div className="py-1 pt-4">
             <div className="font-extrabold  ">รหัสสินค้า</div>
-            <div className="mt-2 text-black bg-white rounded-xl inline-flex items-center h-[40px]">
+            <div className="mt-2 text-black bg-white rounded-xl inline-flex items-center h-10">
               <div className="mx-2"><HiMiniMagnifyingGlass className="text-xl" /></div>
               <TextField
                 autoComplete="off"
@@ -753,7 +779,7 @@ function Header2({ mainPick, register, setValue, headerUnit, data }: { data?: TP
         <th className='px-2 text-start font-normal min-w-50 '>
           <div className="py-1 pt-4 ">
             <div className="font-extrabold ">ชื่อสินค้า</div>
-            <div className="mt-2 text-black bg-white rounded-xl inline-flex items-center h-[40px] w-full ">
+            <div className="mt-2 text-black bg-white rounded-xl inline-flex items-center h-10 w-full ">
               <div className="mx-2"><HiMiniMagnifyingGlass className="text-xl" /></div>
               <TextField
                 autoComplete="off"
@@ -821,7 +847,7 @@ function Header2({ mainPick, register, setValue, headerUnit, data }: { data?: TP
                 <div className="border-t border-gray-400  w-full text-center">{summary?.grandReturnPercent! * 100}%</div>
               </div>
               <div className="text-green-800 flex flex-col items-center justify-end py-1 text-[12px] w-full">
-                <div>#ขาย</div>
+                <div>#รวม</div>
                 <div className="border-t border-gray-400 w-full text-center">{summary?.totalSell}</div>
               </div>
             </div>
@@ -901,16 +927,16 @@ function BodyRow({ setRef, onKeyDown, product, index, register }: { setRef: any;
 }
 
 function BodyRow2({ header, data, setRef, onKeyDown, product, index, register }: { header: any[]; data: any[] | undefined; setRef: any; onKeyDown: any; product: product_order & { id: string, input: string }; index: number; register: any }) {
-  console.log(data)
-  console.log(header.slice(1).map(e => e.docname))
+  // console.log(data)
+  // console.log(header.slice(1).map(e => e.docname))
   const orderDocumentName = header.slice(1).map(e => e.docname)
-  console.log(orderDocumentName)
+  // console.log(orderDocumentName)
   // !!data && console.log(data)
   const summary = data?.at(0) as undefined | { returnUnit: number, sellUnit: number, returnPercent: number }
   // !!summary && console.log(summary)
   const dataRow = data?.slice(1)
   const finalBodyWithOrder = orderDocumentName.map(doc => {
-    console.log(doc)
+    // console.log(doc)
     if (dataRow?.find(e => e.docname == doc)) {
       return dataRow?.find(e => e.docname == doc)
     }
@@ -919,8 +945,8 @@ function BodyRow2({ header, data, setRef, onKeyDown, product, index, register }:
   const len = orderDocumentName.length
   const skip = 6 - len
 
-  console.log(dataRow)
-  console.log(finalBodyWithOrder)
+  // console.log(dataRow)
+  // console.log(finalBodyWithOrder)
   // console.log(product)
   // console.log(register(`filterProduct.${index}.input`))
   // console.log(`filterProduct.${index}.input`)
@@ -944,24 +970,28 @@ function BodyRow2({ header, data, setRef, onKeyDown, product, index, register }:
               if (i <= skipIndex) {
                 return (
                   <div key={i} className="col-span-2 flex w-full ">
-                    <div className="w-full text-center border-l text-red-500"></div>
-                    <div className="w-full text-center border-r border-gray-400"></div>
+                    <div className="w-full text-center  text-red-500"></div>
+                    <div className="w-full text-center  border-gray-400"></div>
                   </div>
                 )
               }
               // console.log(i)
               const d = finalBodyWithOrder?.at(i - skip)
-              // console.log(d)
+              // !!d && console.log(d)
               return (
                 <div key={i} className="col-span-2 flex w-full text-[16px] font-bold">
-                  <div className="w-full text-center border-l text-red-500">{d?.returnUnit || "-"}</div>
-                  <div className="w-full text-center border-r border-gray-400">{d?.sellUnit || "-"}</div>
+                  <div className="w-full  flex justify-center border-l">
+                    <div className={`text-center  text-red-500 ${!!d?.returnUnit ? "bg-red-500 text-white font-light rounded" : ""}  px-2`}>
+                      {!!d ? d?.returnUnit || "" : ""}
+                    </div>
+                  </div>
+                  <div className="w-full text-center  border-gray-400">{!!d ? d?.sellUnit || "" : ""}</div>
                 </div>
               )
             })
           }
-          <div className="col-span-1 text-center bg-gray-100 border-gray-400 text-red-500 font-bold ">{((summary?.returnPercent || 0) * 100).toFixed(0)}%</div>
-          <div className="col-span-1 text-center  bg-gray-100  border-gray-400 font-bold ">{(summary?.sellUnit || 0) + (summary?.returnUnit || 0)}</div>
+          <div className="col-span-1 text-center bg-gray-100 border-gray-400 text-red-500 font-bold rounded-l-sm">{((summary?.returnPercent || 0) * 100).toFixed(0)}%</div>
+          <div className="col-span-1 text-center  bg-gray-100  border-gray-400 font-bold rounded-r-sm">{(summary?.sellUnit || 0) + (summary?.returnUnit || 0)}</div>
         </div>
       </td>
       <td className="border-b  border-gray-200 px-4 ">
