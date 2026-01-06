@@ -1,6 +1,6 @@
 'use client'
 import { GrDocumentExcel } from "react-icons/gr";
-import { IoCloudDownloadOutline } from "react-icons/io5";
+import { IoCloudDownloadOutline, IoTrashOutline } from "react-icons/io5";
 import { HiMiniMagnifyingGlass, HiOutlineTrash, HiXMark } from "react-icons/hi2";
 import getProductList from "@/action/product/get";
 import getUserList, { TUser } from "@/action/user/get";
@@ -10,6 +10,7 @@ import { product_order } from "@/generated/prisma/client"
 import TextField from '@mui/material/TextField';
 import colors from 'tailwindcss/colors'
 import { useLocalStorage } from 'usehooks-ts'
+import { FaFilterCircleDollar } from "react-icons/fa6";
 
 const defaultValues = {
   queryId: "",
@@ -17,6 +18,7 @@ const defaultValues = {
   queryUnitPrice: "",
   queryPackCount: "",
   queryValue: "",
+  hasValue: false,
   filterProduct: [] as (product_order & { input?: string })[]
 }
 
@@ -74,10 +76,14 @@ export default function EstimationInput() {
   const useformArray = useFieldArray({ name: "filterProduct", control })
   const { append, fields, insert, move, prepend, remove, replace, swap, update } = useformArray
 
+  const [isInitialLoaded, setIsInitialLoaded] = useState(false);
+  // สร้าง flag ไว้ เพราะอยากให้ load item data ครั้งเดียว
   useEffect(() => {
-    if (fields.length == 0) return
+    if (fields.length == 0 || isInitialLoaded) return
     getReport()
+    setIsInitialLoaded(true)
   }, [documentId, fields])
+
 
   const valueList = watch("filterProduct").filter(e => !!e.input && e.input !== "0")
   // console.log(valueList)
@@ -344,6 +350,12 @@ export default function EstimationInput() {
         return null
       }
     }
+    if (watch("hasValue")) {
+      const inputValue = input.input ?? ""
+      if (inputValue == "") {
+        return null
+      }
+    }
     // console.log("object")
     return input
   }
@@ -469,10 +481,44 @@ export default function EstimationInput() {
               <div className="ml-2">
                 <RowRadioButtonsGroup value={radioPick} setValue={changeRadioHandler} />
               </div>
-              <div className="ml-2 mb-2">
+              <div className="ml-2 mb-2 select-none">
                 <Tooltip title={"ดูข้อมูลขายย้อนหลัง"}>
                   <div onClick={() => setAnalysisView(e => !e)} className="p-2 bg-gray-100 rounded-full shadow-md shadow-gray-300 hover:cursor-pointer border ">
                     <TbDeviceAnalytics className={` text-2xl  ${analysisView ? "text-gray-600" : "text-gray-400"}`} />
+                  </div>
+                </Tooltip>
+              </div>
+              <div className="ml-2 mb-2 select-none">
+                <Tooltip title={"กรองเฉพาะที่ใส่ยอดประมาณการ"}>
+                  <div onClick={() => {
+                    setValue("hasValue", !watch("hasValue"))
+                  }} className="p-2 bg-gray-100 rounded-full shadow-md shadow-gray-300 hover:cursor-pointer border ">
+                    <FaFilterCircleDollar className={` text-2xl  ${watch("hasValue") ? "text-gray-600" : "text-gray-400"}`} />
+                  </div>
+                </Tooltip>
+              </div>
+              <div className="ml-2 mb-2 select-none  ">
+                <Tooltip title={"ลบข้อมูลทั้งหมด"}>
+                  <div onClick={() => {
+                    // console.log(watch("filterProduct"))
+                    // const replaceData = watch("filterProduct").map(e => ({ ...e, input: "" }))
+                    // console.log(replaceData)
+                    // replace(replaceData)
+                    // // setValue("filterProduct", replaceData)
+                    // console.log(watch("filterProduct"))
+
+                    // ดึงข้อมูลปัจจุบันมา แล้ว map ให้ input เป็นค่าว่างทั้งหมด
+                    const currentValues = watch("filterProduct");
+                    const clearedValues = currentValues.map(item => ({
+                      ...item,
+                      input: "" // เคลียร์เป็นค่าว่าง
+                    }));
+
+                    // ใช้ setValue เพื่ออัปเดต state ของ react-hook-form
+                    setValue("filterProduct", clearedValues);
+
+                  }} className="p-2 bg-white rounded-full shadow-md border-red-500 shadow-gray-300 hover:cursor-pointer border ">
+                    <IoTrashOutline className={` text-2xl text-red-500`} />
                   </div>
                 </Tooltip>
               </div>
@@ -604,8 +650,8 @@ import FormControlLabel from '@mui/material/FormControlLabel';
 import FormControl from '@mui/material/FormControl';
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
-import { IoMdAnalytics, IoMdArrowRoundBack } from "react-icons/io";
-import { TbDeviceAnalytics, TbPresentationAnalytics } from "react-icons/tb";
+import { IoMdArrowRoundBack } from "react-icons/io";
+import { TbDeviceAnalytics } from "react-icons/tb";
 import { Tooltip } from "@mui/material";
 import { useParams } from "next/navigation";
 import { getPivotDataByCustId, TPivotHeader } from "@/action/estimation-document/pivot-table.ts/get";
