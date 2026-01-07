@@ -453,7 +453,7 @@ model SaleTrip {
   reportDetailId   Int?
   DocumentDetail   DocumentDetail[]
   SaleTripWithDate SaleTripWithDate[]
-  customerDB       customerDB[]
+  customerDB       customerDB[]             @relation("SaleTripTocustomerDB")
 }
 
 model SaleTripWithDate {
@@ -689,7 +689,7 @@ model customerDB {
   DocumentFolder  DocumentFolder[]
   customerCheckin customerCheckin[]
   PriceBook       PriceBook?        @relation(fields: [priceBookId], references: [id])
-  SaleTrip        SaleTrip[]
+  SaleTrip        SaleTrip[]        @relation("SaleTripTocustomerDB")
 
   @@index([priceBookId], map: "customerDB_priceBookId_fkey")
 }
@@ -761,6 +761,7 @@ model product_order {
   AssetControl                     AssetControl[]
   History                          History[]
   ProductOrderOnPriceBooksExplicit ProductOrderOnPriceBooksExplicit[]
+  Product_Unit_Conversion          Product_Unit_Conversion[]
   TransferTransaction              TransferTransaction[]
   WarehouseOnProductOrder          WarehouseOnProductOrder[]
   customer_transaction             customer_transaction[]
@@ -819,6 +820,25 @@ model returngoods {
   @@index([documentFolderId], map: "returngoods_documentFolderId_fkey")
   @@index([product_orderProduct_code1], map: "returngoods_product_orderProduct_code1_fkey")
   @@index([slmname, docdate, key_name, product_code1, custcode, isActive])
+}
+
+model Product_Unit_Conversion {
+  id                Int            @id @default(autoincrement())
+  unit_id           Int
+  conversion_factor Float          @default(1)
+  barcode           String?        @unique
+  product_code      String?        @db.VarChar(100)
+  product_order     product_order? @relation(fields: [product_code], references: [product_code1])
+  Product_unit      Product_unit   @relation(fields: [unit_id], references: [unit_id])
+
+  @@unique([product_code, unit_id])
+  @@index([unit_id], map: "Product_Unit_Conversion_unit_id_fkey")
+}
+
+model Product_unit {
+  unit_id                 Int                       @id
+  unit_name               String
+  Product_Unit_Conversion Product_Unit_Conversion[]
 }
 
 enum Warehouse_wh_type {

@@ -4,8 +4,8 @@ DOCKER_USERNAME := tonhom260
 
 # TAG := 1.0 # bug fix
 # TAG := 1.1 # เพิ่ม main list page
-TAG := 1.2 # เพิ่ม main list page
- 
+# TAG := 1.2 # เพิ่ม main list page
+TAG := 1.3 # เพิ่ม csv download + cloud fetching + set limit compare 
 
 DOCKERFILE := Dockerfile
 REGISTRY := docker.io

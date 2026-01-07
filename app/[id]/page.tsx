@@ -1,6 +1,5 @@
 'use client'
 import { GrDocumentExcel } from "react-icons/gr";
-import { FaXmark } from "react-icons/fa6";
 import { IoCloudDownloadOutline, IoTrashOutline } from "react-icons/io5";
 import { HiMiniMagnifyingGlass, HiOutlineTrash, HiXMark } from "react-icons/hi2";
 import getProductList from "@/action/product/get";
