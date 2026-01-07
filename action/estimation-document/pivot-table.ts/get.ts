@@ -46,8 +46,8 @@ export async function getPivotDataByCustId({ custid = "C221100212" }: { custid?:
         }) as TPivotHeader
 
         console.log(headerData)
-        const grandSell = headerData.reduce((p, e) => (e.sumDateSell || 0) + p, 0)
-        const grandReturn = headerData.reduce((p, e) => (e.sumDateReturn || 0) + p, 0)
+        const grandSell = headerData?.reduce((p, e) => (e.sumDateSell || 0) + p, 0)
+        const grandReturn = headerData?.reduce((p, e) => (e.sumDateReturn || 0) + p, 0)
         const totalGrandSell = grandReturn + grandSell // ขาย + เปลี่ยน
         const grandReturnPercent = (totalGrandSell == 0)
             ? undefined :

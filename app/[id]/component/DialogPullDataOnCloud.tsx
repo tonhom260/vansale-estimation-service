@@ -11,7 +11,7 @@ import { DatePickerWithRange } from '@/useform-components/DatePickerWithRange';
 import { SingleDatePickerWithRangeChadcn } from '@/useform-components/SingleDatePickerWithRangeChadcn';
 import { getTeamList } from '@/action/team/get';
 import { useEffect, useState } from 'react';
-import { SellingArea } from '@/generated/prisma/client';
+import { product_order, SellingArea } from '@/generated/prisma/client';
 import getCustList from '@/action/customer/get';
 import { blue } from '@mui/material/colors';
 import { getEstimationDocumentByCustId, TEstDoc } from '@/action/estimation-document/get';
@@ -29,12 +29,13 @@ type DisplayReport = {
     netUnitAmount: number;
     effectiveDate: Date;
     updateBy: string;
+    listOfOrder?: { index: number; nextOrder: number }[]
 
 }
 
 
-export default function DialogPullDataOnCloud({ onClose, submitFn, custId }: { onClose: any; submitFn: any; custId: string }) {
-
+export default function DialogPullDataOnCloud({ onClose, submitFn, custId, productOrderList }: { onClose: any; submitFn: any; custId: string, productOrderList?: product_order[] }) {
+    console.log(productOrderList)
     async function getList() {
         const list = await getTeamList({ option: true }) as any[]
         console.log(list)
@@ -76,6 +77,12 @@ export default function DialogPullDataOnCloud({ onClose, submitFn, custId }: { o
                 netAmount: netamount ?? 0,
                 netUnitAmount: sumUnitAmt,
                 updateBy: responsible ?? "-",
+                listOfOrder: CustomerOrderEstimation.map((e, i) => {
+                    return {
+                        index: productOrderList?.findIndex(prod => e.productcode == prod.product_code1),
+                        nextOrder: e.nextOrder
+                    } as { index: number; nextOrder: number }
+                })
             }
         })
         console.log(report)
@@ -86,7 +93,22 @@ export default function DialogPullDataOnCloud({ onClose, submitFn, custId }: { o
         const report = await getPastSaleRecordByCustId({ custId }) as TSaleHistory[]
         const modifyReport: DisplayReport[] = report.map(e => {
             console.log(e)
-            const { returngoods, customer_transaction } = e
+
+            const { returngoods, customer_transaction, order_no } = e
+
+            order_no == "SO-2512-03541" && console.log(e)
+
+            const dataList = productOrderList?.map((e, i) => {
+                const code = e.product_code1
+                const saleAmt = customer_transaction?.find(e => e.product_code1 == code)?.sale_units || 0
+                const retAmt = returngoods?.find(e => e.product_code1 == code)?.ret_unit || 0
+                return {
+                    index: i,
+                    nextOrder: saleAmt + retAmt
+                } as { index: number; nextOrder: number }
+            }).filter(e => e.nextOrder != 0)
+
+
             const sumSaleUnitAmt = customer_transaction.reduce((p, e) => {
                 const unitAmt = e.sale_units || 0
                 return unitAmt + p
@@ -109,6 +131,7 @@ export default function DialogPullDataOnCloud({ onClose, submitFn, custId }: { o
                 netAmount: sumSaleBahtAmt + sumReturnBahtAmt,
                 netUnitAmount: sumSaleUnitAmt + sumReturnUnitAmt,
                 updateBy: e.created_by_whom,
+                listOfOrder: dataList
             }
         })
         console.log(modifyReport)
@@ -169,7 +192,7 @@ export default function DialogPullDataOnCloud({ onClose, submitFn, custId }: { o
                             {
                                 report.map(e => {
 
-                                    const { docname, effectiveDate, netAmount, netUnitAmount, updateBy } = e
+                                    const { docname, effectiveDate, netAmount, netUnitAmount, updateBy, listOfOrder } = e
                                     return (
                                         <div key={docname} className='grid grid-cols-7 w-full h-10 pt-2'>
                                             <div className='col-span-2 pl-2 font-medium'>{docname} </div>
@@ -177,7 +200,7 @@ export default function DialogPullDataOnCloud({ onClose, submitFn, custId }: { o
                                             <div className='col-span-1 pl-2'>{thaiBaht.format(netAmount)} </div>
                                             <div className='col-span-1 pl-2'>{netUnitAmount} </div>
                                             <div className='col-span-1 pl-2'>{updateBy} </div>
-                                            <Button onClick={() => { submitFn(docname, pick) }} variant='text'>เลือก</Button>
+                                            <Button onClick={() => { submitFn(docname, listOfOrder) }} variant='text'>เลือก</Button>
                                         </div>
                                     )
                                 })
