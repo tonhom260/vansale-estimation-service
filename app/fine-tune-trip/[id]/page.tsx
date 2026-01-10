@@ -25,6 +25,19 @@ const defaultValues = {
 export type TUseform = UseFormReturn<typeof defaultValues>
 
 export default function EstimationInput() {
+  const searchParams = useSearchParams()
+  const dateRangeQuery = searchParams.get('range')
+  console.log(dateRangeQuery)
+  const [dateRange, setDateRange] = useState<{ from: Date; to: Date } | null>(null);
+  console.log(dateRange)
+  useEffect(() => {
+    console.log(dateRangeQuery)
+    const parse = JSON.parse(dateRangeQuery!)
+    //  { from: '2026-01-07T17:00:00.000Z', to: '2026-01-08T17:00:00.000Z' }
+    const dateRange = { from: new Date(parse.from), to: new Date(parse.to) }
+    console.log(parse)
+    setDateRange(dateRange)
+  }, [dateRangeQuery])
 
   const getSession = async () => {
     try {
@@ -455,7 +468,7 @@ export default function EstimationInput() {
     setValue("filterProduct", clearedValues);
   }
 
-  const [analysisView, setAnalysisView] = useState(false)
+  const [analysisView, setAnalysisView] = useState(true)
 
   const [loadDocId, setLoadDocId] = useState("")
 
@@ -547,25 +560,25 @@ export default function EstimationInput() {
           <div className="flex justify-between items-start">
             <div className="flex items-center">
               <Link href={"/"}><IoMdArrowRoundBack className="mr-2 text-3xl hover:cursor-pointer" /></Link>
-              <div className="text-3xl">{report?.customerDB?.custname ?? "-"}</div>
+              <div className="text-3xl">{`ปรับปรุงยอดประมาณการเพื่อสั่งผลิต`}</div>
             </div>
             <div className="border-2 rounded-xl border-gray-300 flex">
               <div className=" min-w-50 p-2 border-r border-gray-300 text-center">
-                <div className="text-gray-600 text-xl text-center">{report?.SaleTrip?.tripName ?? "ผู้เข้าบริการ"}</div>
-                <div className="">{report?.slmname ?? "-"}</div>
+                <div className="text-gray-600 text-xl text-center">{"สายขาย"}</div>
+                <div className="mt-2">{report?.slmname ?? "-"}</div>
               </div>
               <div className="min-w-50 p-2 text-center">
-                <div className="text-gray-600 text-xl">วันที่ทำประมาณการ</div>
-                <div className="">{!!report?.effectiveDate ? format(report?.effectiveDate!, "dd-MM-yyyy") : ""}</div>
+                <div className="text-gray-600 text-xl">วันที่ออกทริป</div>
+                <div className="mt-2">  {!!dateRange ? format(dateRange.from, "dd-MM-yyyy") : ""}  -  {!!dateRange ? format(dateRange.to!, "dd-MM-yyyy") : ""}</div>
               </div>
             </div>
-            <div className="flex gap-2 min-w-80">
-              <div onClick={() => { setOpenCloud(true) }} className="hover:cursor-pointer p-3 border-gray-600 border rounded-xl flex items-center">
+            <div className="flex gap-2 min-w-40 justify-end mr-2">
+              {/* <div onClick={() => { setOpenCloud(true) }} className="hover:cursor-pointer p-3 border-gray-600 border rounded-xl flex items-center">
                 <IoCloudDownloadOutline />
                 <span className="ml-2">
                   ดึงข้อมูลจากระบบ
                 </span>
-              </div>
+              </div> */}
               <div
                 className="hover:cursor-pointer p-3 border-gray-600 border rounded-xl flex items-center"
                 onClick={() => {
@@ -601,13 +614,7 @@ export default function EstimationInput() {
               <div className="ml-2">
                 <RowRadioButtonsGroup value={radioPick} setValue={changeRadioHandler} />
               </div>
-              <div className="ml-2 mb-2 select-none">
-                <Tooltip title={"ดูข้อมูลขายย้อนหลังรายชิ้น"}>
-                  <div onClick={() => setAnalysisView(e => !e)} className="p-2 bg-gray-100 rounded-full shadow-md shadow-gray-300 hover:cursor-pointer border ">
-                    <TbDeviceAnalytics className={` text-2xl  ${analysisView ? "text-gray-600" : "text-gray-400"}`} />
-                  </div>
-                </Tooltip>
-              </div>
+
               <div className="ml-2 mb-2 select-none">
                 <Tooltip title={"กรองเฉพาะที่ใส่ยอดประมาณการ"}>
                   <div onClick={() => {
@@ -630,15 +637,11 @@ export default function EstimationInput() {
         </div>
         <div className="w-full h-[calc(100vh-250px)] overflow-y-auto " style={{ scrollbarWidth: "none" }}>
           <table className="table-fixed w-full border-separate border-spacing-0 text-black text-sm">
-            {
-              analysisView
-                ? <Header2 headerUnit={headerUnit} mainPick={mainPick} register={register} setValue={setValue} data={pivotTable?.header} />
-                : <Header1 loadDocId={loadDocId} headerUnit={headerUnit} mainPick={mainPick} register={register} setValue={setValue} curBahtSummation={curBahtSummation || 0} />
-            }
+
+            <Header2 headerUnit={headerUnit} mainPick={mainPick} register={register} setValue={setValue} data={pivotTable?.header} />
             <tbody className="w-full divide-y divide-gray-100 ">
               {
                 watch("filterProduct").map((field, i) => {
-
                   // console.log(productcode)
                   const filterObject = filterProductAndReturn(field)
                   // console.log(filterObject)
@@ -653,7 +656,6 @@ export default function EstimationInput() {
                     // console.log(productcode, data)
                     return (
                       <BodyRow2
-
                         header={pivotTable?.header ?? []}
                         data={data}
                         setRef={(el: any) => (itemRefs.current[filterObject.product_code1] = el)}
@@ -663,16 +665,6 @@ export default function EstimationInput() {
                       />
                     )
                   }
-                  return (
-                    <BodyRow
-                      headerUnit={headerUnit}
-                      product={filterObject}
-                      setRef={(el: any) => (itemRefs.current[filterObject.product_code1] = el)}
-                      register={register}
-                      key={field.product_code1}
-                      onKeyDown={(e: any) => handleKeyDown(e, filterObject, selectedList)} index={i}
-                    />
-                  )
                 })
               }
             </tbody>
@@ -761,9 +753,6 @@ export default function EstimationInput() {
 }
 
 
-
-
-
 import Radio from '@mui/material/Radio';
 import RadioGroup from '@mui/material/RadioGroup';
 import FormControlLabel from '@mui/material/FormControlLabel';
@@ -773,7 +762,7 @@ import Button from "@mui/material/Button";
 import { IoMdArrowRoundBack } from "react-icons/io";
 import { TbDeviceAnalytics } from "react-icons/tb";
 import { Tooltip } from "@mui/material";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
 import { getPivotDataByCustId, TPivotHeader } from "@/action/estimation-document/pivot-table.ts/get";
 import { skip } from "node:test";
 import { getEstimationDocumentDetailByDocname, TEstDetail } from "@/action/estimation-document/detail";
@@ -803,117 +792,6 @@ export function RowRadioButtonsGroup({ value, setValue }: { value: any, setValue
   );
 }
 
-function Header1({ curBahtSummation, loadDocId, mainPick, register, setValue, headerUnit }: { curBahtSummation: number; loadDocId?: string; mainPick: any; register: any; setValue: any; headerUnit: any }) {
-  return (
-    <thead className={`rounded-xl w-full sticky top-0 ${mainPick == "OISHI" ? "bg-[#e7000b] text-white" : "bg-orange-500"} `} >
-      <tr className='h-10  w-full text-[12px] 2xl:text-[16px] '>
-        <th className='pl-4  px-2 text-start  rounded-tl-xl font-[400] w-[130px] '>
-          <div className="py-4">
-            <div className="font-extrabold  ">รหัสสินค้า</div>
-            <div className="mt-2 text-black bg-white rounded-xl inline-flex items-center h-[40px]">
-              <div className="mx-2"><HiMiniMagnifyingGlass className="text-xl" /></div>
-              <TextField
-                autoComplete="off"
-                slotProps={{ input: { disableUnderline: true } }}
-                size="small"
-                variant="standard"
-                sx={{ background: "white" }}
-                {...register("queryId")}
-              />
-              <div className="mx-2"><HiXMark className="text-xl" onClick={() => setValue("queryId", "")} /></div>
-            </div>
-          </div>
-        </th>
-        <th className=' px-2 text-start   font-[400]  w-[300px]'>
-          <div className="py-4 ">
-            <div className="font-extrabold ">ชื่อสินค้า</div>
-            <div className="mt-2 text-black bg-white rounded-xl inline-flex items-center h-[40px] w-full ">
-              <div className="mx-2"><HiMiniMagnifyingGlass className="text-xl" /></div>
-              <TextField
-                autoComplete="off"
-                fullWidth
-                slotProps={{ input: { disableUnderline: true } }}
-                size="small"
-                variant="standard"
-                sx={{ background: "white" }}
-                {...register("queryName")}
-              />
-              <div className="mx-2"><HiXMark className="text-xl" onClick={() => setValue("queryName", "")} /></div>
-            </div>
-          </div>
-        </th>
-        <th className='  px-2 text-start  font-[400] w-[120px]'>
-          <div className="py-4">
-            <div className="font-extrabold ">ราคา/หน่วย</div>
-            <div className="mt-2 text-black bg-white rounded-xl inline-flex items-center h-[40px]">
-              <div className="mx-2"><HiMiniMagnifyingGlass className="text-xl" /></div>
-              <TextField
-                autoComplete="off"
-                slotProps={{ input: { disableUnderline: true } }}
-                size="small"
-                variant="standard"
-                sx={{ background: "white" }}
-                {...register("queryUnitPrice")}
-              />
-              <div className="mx-2"><HiXMark className="text-xl" onClick={() => setValue("queryUnitPrice", "")} /></div>
-            </div>
-          </div>
-        </th>
-        <th className='  px-2 text-start  font-[400] w-[120px]'>
-          <div className="py-4">
-            <div className="font-extrabold ">หน่วยนับ</div>
-            <div className="mt-2 text-black bg-white rounded-xl inline-flex items-center h-[40px]">
-              <div className="mx-2"><HiMiniMagnifyingGlass className="text-xl" /></div>
-              <TextField
-                autoComplete="off"
-                slotProps={{ input: { disableUnderline: true } }}
-                size="small"
-                variant="standard"
-                sx={{ background: "white" }}
-                {...register("queryPackCount")}
-              />
-              <div className="mx-2"><HiXMark className="text-xl" onClick={() => setValue("queryPackCount", "")} /></div>
-            </div>
-          </div>
-        </th>
-        <th className='  px-2 text-start  font-normal w-30'>
-          <div className="py-4 pr-4">
-            <div className="font-extrabold  line-clamp-1 ">บันทึกล่าสุด</div>
-            <div className="mt-2 rounded-xl  h-10 flex items-center pl-3 pr-2 text-[10px] bg-white text-black font-extrabold">
-              {loadDocId ?? ""}
-            </div>
-          </div>
-        </th>
-        <th className='  px-2 text-start  font-normal w-30'>
-          <div className="py-4">
-            <div className="font-extrabold ">ยอดสั่ง/<span className="underline">{headerUnit}</span></div>
-            <div className="text-black mt-2 bg-white rounded-xl inline-flex items-center h-10">
-              <div className="mx-2"><HiMiniMagnifyingGlass className="text-xl" /></div>
-              <TextField
-                autoComplete="off"
-                slotProps={{ input: { disableUnderline: true } }}
-                size="small"
-                variant="standard"
-                sx={{ background: "white" }}
-                {...register("queryValue")}
-              />
-              <div className="font-bold text-sm pt-1">{headerUnit}</div>
-              <div className="mx-2"><HiXMark className="text-xl" onClick={() => setValue("queryValue", "")} /></div>
-            </div>
-          </div>
-        </th>
-        <th className='  px-2 text-start    rounded-tr-xl   font-[400] w-[160px]'>
-          <div className="py-4 pr-4">
-            <div className="font-extrabold  line-clamp-1 ">ยอดรวม</div>
-            <div className="text-black mt-2 rounded-xl  h-[40px] flex items-center pl-4 text-[12px] bg-white">
-              {curBahtSummation?.toFixed(1) || "0"}
-            </div>
-          </div>
-        </th>
-      </tr>
-    </thead>
-  )
-}
 
 function Header2({ mainPick, register, setValue, headerUnit, data }: { data?: TPivotHeader, mainPick: any; register: any; setValue: any; headerUnit: any }) {
   console.log(data)
@@ -1041,62 +919,6 @@ function Header2({ mainPick, register, setValue, headerUnit, data }: { data?: TP
         </th>
       </tr>
     </thead >
-  )
-}
-
-function BodyRow({ headerUnit, setRef, onKeyDown, product, index, register }: { headerUnit: "ชิ้น" | "หิ้ว"; setRef: any; onKeyDown: any; product: product_order & { id: string, input: string; loadedValue?: string, Product_Unit_Conversion: { conversion_factor: number }[]; conversion_factor: number }; index: number; register: any }) {
-  console.log(product.Product_Unit_Conversion)
-  console.log(headerUnit)
-  // Product_Unit_Conversion: [ { conversion_factor: 30 } ],
-
-  const { product_name, product_code1, basicPrice, input, loadedValue, conversion_factor } = product
-  console.log(conversion_factor)
-  const { ref: registerRef, ...rest } = register(`filterProduct.${index}.input`);
-
-  // const groupUnit = product.Product_Unit_Conversion.at(0)?.conversion_factor || 1
-  // console.log(groupUnit)
-  const baseUnit = 1
-  const multipler = headerUnit == "หิ้ว" ? conversion_factor : baseUnit
-  return (
-    <tr className="transition-colors focus-within:bg-blue-50 text-[16px]  bg-white font-normal">
-      <td className="border-b  border-gray-200 pl-8 text-gray-500">
-        {product_code1}
-      </td>
-      <td className="border-b  border-gray-200 pl-8 font-normal">
-        {product_name}
-      </td>
-      <td className="border-b  border-gray-200 pl-8  font-light">
-        {basicPrice}
-      </td>
-      <td className="border-b  border-gray-200 pl-8 font-light underline" >
-        {multipler}
-      </td>
-      <td className="border-b  border-gray-200 pl-8">
-        {loadedValue || ""}
-      </td>
-      <td className="border-b  border-gray-200 px-4 ">
-        <div className="flex items-center h-full py-1">
-          <input
-            autoComplete="off"
-            className="bg-gray-50 w-full border-b border-gray-200 rounded-md 2xl:h-10  pl-4 text-[16px] font-extrabold text-blue-600  "
-            onKeyDown={onKeyDown}
-            ref={(el) => {
-              registerRef(el)
-              setRef(el)
-            }}
-            {...rest}
-            value={input ?? ""}
-          />
-        </div>
-      </td>
-      <td className=" border-gray-200 pl-8 border-b">
-        {
-          headerUnit == "หิ้ว"
-            ? !!product.input ? (+input * +basicPrice! * conversion_factor).toFixed(1) : ""
-            : !!product.input ? (+input * +basicPrice!).toFixed(1) : ""
-        }
-      </td>
-    </tr >
   )
 }
 

@@ -7,7 +7,7 @@ export async function GET() {
             productcategory: { in: ["DRINKPRODUCT", "OISHI_LOAF", "OISHI_TRADE", "OISHI_MAN"] }
         }
     })
-    console.log(product.map(e => e.product_code1))
+    // console.log(product.map(e => e.product_code1))
     const prodList = product.map(e => e.product_code1)
 
     for (let p of prodList) {

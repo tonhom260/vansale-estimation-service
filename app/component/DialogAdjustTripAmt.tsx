@@ -14,7 +14,7 @@ import { useEffect, useState } from 'react';
 import getCustList from '@/action/customer/get';
 import { SingleDatePickerWithRangeChadcn } from '@/useform-components/SingleDatePickerWithRangeChadcn';
 
-export default function DialogAdjustTripAmt({ onClose }: { onClose: any }) {
+export default function DialogAdjustTripAmt({ onClose, submitFn }: { onClose: any; submitFn: any }) {
 
 
     async function getList() {
@@ -22,20 +22,16 @@ export default function DialogAdjustTripAmt({ onClose }: { onClose: any }) {
         console.log(list)
         setTeam(list)
     }
-    const [cust, setCust] = useState<any[]>([])
-    async function getCustListFn() {
-        const list = await getCustList({ option: true }) as any[]
-        console.log(list)
-        setCust(list)
-    }
+
     const [team, setTeam] = useState<any[]>([])
     useEffect(() => {
         getList()
-        getCustListFn()
+        // getCustListFn()
     }, [])
 
     const useform = useForm({ defaultValues: {} })
-    const { getValues } = useform
+    const { getValues, } = useform
+
     const handleClose = () => {
         onClose()
     };
@@ -68,14 +64,17 @@ export default function DialogAdjustTripAmt({ onClose }: { onClose: any }) {
                     <div className=''>
                         <div className='text-[14px]'>เลือกวันที่สายขายออกทริป</div>
                         {/* <DatePickerWithRange formControl={useform} name='daterange' /> */}
-                        <SingleDatePickerWithRangeChadcn formControl={useform} name='datepick' />
+                        <DatePickerWithRange formControl={useform} name='daterange' />
                     </div>
                     {/* <div>หรือ</div>
                     <div><TextFieldUseform size='medium' formData={useform} label='เลือกจากเลขเอกสารประมาณการ' name='docname' placeholder='ระบุเลขที่เอกสาร' /></div> */}
                 </DialogContent>
                 <DialogActions sx={{ paddingInline: 3, marginBottom: 0, marginTop: 4 }}>
                     <Button sx={{ borderColor: "gray", color: 'gray', borderRadius: 2 }} fullWidth variant='outlined' onClick={handleClose}>ย้อนกลับ</Button>
-                    <Button sx={{ borderRadius: 2 }} fullWidth variant='contained' onClick={handleClose} autoFocus>
+                    <Button sx={{ borderRadius: 2 }} fullWidth variant='contained'
+                        onClick={() => {
+                            submitFn(getValues())
+                        }} autoFocus>
                         ปรับปรุงยอดประมาณการ
                     </Button>
                 </DialogActions>

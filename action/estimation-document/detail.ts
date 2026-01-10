@@ -25,7 +25,7 @@ export async function getEstimationDocumentDetailByDocname({ docname }: { docnam
                 // CustomerOrderEstimation: true
             },
         })
-
+        // console.log(orderPlanByDocname?.CustomerOrderEstimation)
         return orderPlanByDocname
     } catch (e) { console.log(e) }
 }

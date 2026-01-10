@@ -16,6 +16,7 @@ import { TUser } from '@/action/user/get';
 import { getTeamList } from '@/action/team/get';
 import getCustList from '@/action/customer/get';
 import { useRouter } from 'next/navigation';
+import { createFinetuneDocument } from '@/action/estimation-document/fine-tune-document/create';
 
 export default function Main() {
     async function getTeamListFn() {
@@ -85,6 +86,7 @@ export default function Main() {
         setReport(list as any[])
     }
     async function getListByCust() {
+        if (!watch("cust")) return
         const list = await getEstimationDocumentByCustId({ custId: watch("cust").value })
         console.log(list)
         setReport(list as any[])
@@ -131,10 +133,30 @@ export default function Main() {
         </div>
     }
 
+    async function createFineTuneDoc(data: any) {
+        console.log(data)
+        const sale = data?.saleman?.value as string
+        const dateRange = data?.daterange as { from: Date, to: Date }
+        if (sale == undefined || dateRange == undefined) {
+            alert("กรุณากรอกข้อมูลให้ครบ")
+            return
+        }
+
+        try {
+            const result = await createFinetuneDocument({ ...data, editBy: user?.name ?? "" })
+            if (!!result) {
+                router.push(`/fine-tune-trip/${result.orderDocname}?range=${JSON.stringify(dateRange)}`)
+            }
+        } catch (e) { console.log(e) }
+
+
+
+    }
+
     return (
         <div className='p-10 px-12 w-full h-full bg-white'>
             {openCreate && <DialogCreate onClose={() => setOpenCreate(false)} submitFn={createEst} />}
-            {openAdj && <DialogAdjustTripAmt onClose={() => setOpenAdj(false)} />}
+            {openAdj && <DialogAdjustTripAmt onClose={() => setOpenAdj(false)} submitFn={createFineTuneDoc} />}
             <div>
                 <div className='flex  items-center justify-between'>
                     <div className='text-4xl font-semibold mb-4'>ประมาณการสายขาย | Estimation</div>

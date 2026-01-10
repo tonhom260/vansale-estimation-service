@@ -46,7 +46,6 @@ export async function getEstimationDocumentByDateAndSale({ startTripDate, team }
 
 export async function getEstimationDocumentByCustId({ custId }: { custId: string }) {
     try {
-
         const orderPlanByCust = await prisma.documentDetail.findMany({
             include: {
                 CustomerOrderEstimation: true,

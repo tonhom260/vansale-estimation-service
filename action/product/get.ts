@@ -6,9 +6,6 @@ type T = Prisma.AccountGetPayload<{ include: { User: true } }>
 
 export default async function getProductList() {
     try {
-
-        // const p = await prisma.product_order.findFirst({include:{}})
-
         const catList = await prisma.product_order.findMany({
             select: { productcategory: true },
             distinct: ['productcategory'], where: { isActive: true, productcategory: { notIn: ["ASSET", "WASTE", "SPECIALPRODUCT"] } }
@@ -18,21 +15,17 @@ export default async function getProductList() {
             include: {
                 Product_Unit_Conversion: {
                     select: {
-                        unit_id: true,
+                        // unit_id: true,
                         conversion_factor: true,
-                        Product_unit: {
-                            select: {
-                                unit_name: true
-                            }
-                        }
                     },
                     where: { Product_unit: { unit_name: "หิ้ว" } }
                 }
             },
             where: { isActive: true, productcategory: { notIn: ["ASSET", "WASTE", "SPECIALPRODUCT"] } }
         })
-
-        console.log(productList)
-        return { items: productList, cat: catList.map(e => e.productcategory!) }
+        // console.log(productList)
+        const convertProductList = productList.map(e => ({ ...e, conversion_factor: (e.Product_Unit_Conversion?.at(0)?.conversion_factor) || 1, Product_Unit_Conversion: undefined }))
+        // console.log(convertProductList)
+        return { items: convertProductList, cat: catList.map(e => e.productcategory!) }
     } catch (e) { console.log(e) }
 }
