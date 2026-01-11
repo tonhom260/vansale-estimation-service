@@ -70,11 +70,11 @@ export default function EstimationInput() {
     })
   }, [])
 
-  const [openCloud, setOpenCloud] = useState(false)
   const param = useParams()
   const documentId = param.id as string
 
   const [report, setReport] = useState<TEstDetail | null>(null)
+  console.log(report)
 
   function convert(measure: "single" | "group") {
     if (measure == "single") {
@@ -87,61 +87,17 @@ export default function EstimationInput() {
   async function getReport() {
     if (!documentId) return
     const result = await getEstimationDocumentDetailByDocname({ docname: documentId! })
-    console.log(result)
     setReport(result as any)
-    if (result && result?.CustomerOrderEstimation.length > 0) {
-      // console.log(result.CustomerOrderEstimation)
-      const itemsList = result.CustomerOrderEstimation.map(e => ({
-        ...e,
-        index: fields.findIndex(i => i.product_code1 == e.productcode),
-        multiplier: (fields?.find(i => i.product_code1 == e.productcode)?.conversion_factor) || 1,
-        cat: (fields?.find(i => i.product_code1 == e.productcode)?.productcategory),
-      }))
-      // console.log(itemsList)
-      // console.log(headerUnit)
-      for (let item of itemsList) {
-        // console.log(item)
-        // console.log(item.cat)
-
-        const isKitz = item.cat?.includes("KITZ")
-        // console.log(isKitz)
-        //"single" | "group"
-        // console.log(measure)
-        // console.log(measure)
-        const unitSpecify = isKitz ? convert(measure.KITZ as any) : convert(measure.OISHI as any)
-        // console.log(unitSpecify)
-        if (unitSpecify == "หิ้ว") {
-          const convertUnit = Math.round(((item.nextOrder || 0) / item.multiplier) * 100) / 100
-          setValue(`filterProduct.${item.index}.input`, convertUnit?.toString() ?? "")
-        } else {
-          setValue(`filterProduct.${item.index}.input`, item.nextOrder?.toString() ?? "")
-        }
-      }
-    }
   }
 
   const [pivotTable, setPivotTable] = useState<{
     header: TPivotHeader;
-    body: Record<string, any[]>;
+    body: number[][];
+    finetuneData: number[]
   } | undefined>(undefined)
 
-  // console.log(pivotTable?.body)
-
-  async function getPivotSheet() {
-    if (!report) return
-    const dataSheets = await getPivotDataByCustId({ custid: report?.custcode ?? "" })
-    console.log(dataSheets?.body)
-    setPivotTable(dataSheets as any)
-  }
-
-  useEffect(() => {
-    getPivotSheet()
-  }, [report])
-
   const useform = useForm({ defaultValues })
-
   const { setValue, watch, control, register } = useform
-
 
   const useformArray = useFieldArray({ name: "filterProduct", control })
   const { append, fields, insert, move, prepend, remove, replace, swap, update } = useformArray
@@ -155,22 +111,70 @@ export default function EstimationInput() {
     setIsInitialLoaded(true)
   }, [documentId, fields])
 
+  useEffect(() => {
+    if (isInitialLoaded) {
+      fetchData()
+    }
+  }, [isInitialLoaded, report]);
+
+  async function fetchData() {
+    console.log(dateRange)
+    if (!report) {
+      console.log("no report")
+      return
+    }
+    console.log("running")
+    const d = await getPivotDataBySaleWithDateRange({ dateRange: dateRange!, team: report?.areacode! })
+    setPivotTable(d)
+    // const list = d?.body
+    // console.log(list)
+    const fineTuneList = d?.finetuneData ?? []
+    if (fineTuneList && fineTuneList.length > 0) {
+      console.log(fineTuneList)
+      // console.log(result.CustomerOrderEstimation)
+      const productList = watch("filterProduct")
+      for (let i in productList) {
+        const isKitz = productList?.at(+i)?.productcategory?.includes("KITZ")
+        const unitSpecify = isKitz ? convert(measure.KITZ as any) : convert(measure.OISHI as any)
+        if (unitSpecify == "หิ้ว") {
+          const convertUnit = Math.round(((fineTuneList.at(+i) || 0) / (productList.at(+i)?.conversion_factor || 1)) * 100) / 100
+          setValue(`filterProduct.${+i}.input`, convertUnit?.toString() ?? "")
+        } else {
+          setValue(`filterProduct.${+i}.input`, (fineTuneList.at(+i) || 0)?.toString() ?? "")
+        }
+      }
+    }
+  }
+  async function renewData() {
+    console.log(dateRange)
+    const d = await getPivotDataBySaleWithDateRange({ dateRange: dateRange!, team: report?.areacode! })
+    setPivotTable(d)
+    const list = d?.body
+    console.log(list)
+    const sumList = list?.map(e => e.at(e.length - 1)) ?? []
+    console.log(sumList)
+    if (sumList && sumList.length > 0) {
+      // console.log(result.CustomerOrderEstimation)
+      const productList = watch("filterProduct")
+      for (let i in productList) {
+        const isKitz = productList?.at(+i)?.productcategory?.includes("KITZ")
+        const unitSpecify = isKitz ? convert(measure.KITZ as any) : convert(measure.OISHI as any)
+        if (unitSpecify == "หิ้ว") {
+          const convertUnit = Math.round(((sumList.at(+i) || 0) / (productList.at(+i)?.conversion_factor || 1)) * 100) / 100
+          setValue(`filterProduct.${+i}.input`, convertUnit?.toString() ?? "")
+        } else {
+          setValue(`filterProduct.${+i}.input`, (sumList.at(+i) || 0)?.toString() ?? "")
+        }
+      }
+    }
+    alert("ปรับเป็นค่าเริ่มต้น ยอดจะตรงกับประมาณการจริง")
+  }
+
 
   const valueList = watch("filterProduct").filter(e => !!e.input && e.input !== "0")
 
   const [selectIndex, setSelectIndex] = useState(0)
-
-  const [user, setUser] = useState<TUser[]>([])
-  // console.log("run")
-
-  async function getUsers() {
-    const user = await getUserList()
-    setUser(user!)
-  }
-
-  // measurement ...
   const [measure, setMeasure] = useLocalStorage('measurement_unit', { "OISHI": "group", "KITZ": "single" })
-  // console.log(measure)
 
   const curBahtSummation = watch("filterProduct").reduce((prev, e) => {
     const multipler = e.conversion_factor
@@ -233,7 +237,7 @@ export default function EstimationInput() {
 
   useEffect(() => {
     getProduct()
-    getUsers()
+    // getUsers()
   }, [])
 
   const itemRefs = useRef<Record<string, HTMLInputElement | null>>({});
@@ -261,7 +265,6 @@ export default function EstimationInput() {
   const downloadCSV = () => {
     console.log(headerUnit)
     const inputData = watch('filterProduct')
-    // console.log(inputData)
     const rawDataArray = inputData.map(e => {
       const { product_code1, product_name, input } = e
       return [
@@ -273,7 +276,6 @@ export default function EstimationInput() {
 
     // 1. ดึง Header จาก keys ของ object ตัวแรก
     const headers = ["รหัสสินค้า", "ชื่อสินค้า", documentId, "หน่วยนับ"];
-    console.log(headers)
     // 2. แปลงข้อมูลแต่ละแถวเป็น string
     const rows = rawDataArray.map(row =>
       Object.values(row)
@@ -304,7 +306,7 @@ export default function EstimationInput() {
       const itemCat = e.productcategory ?? ""
       const acceptMainCat = catList.filter(e => e.includes(mainPick))
       if (!acceptMainCat.includes(itemCat)) {
-        console.log(i)
+        // console.log(i)
         return false
       }
 
@@ -314,7 +316,6 @@ export default function EstimationInput() {
         // console.log(i)
         return false
       }
-      console.log("object")
       if (!!watch("queryId")) {
         // console.log(i)
         const productCode = e.product_code1
@@ -340,7 +341,6 @@ export default function EstimationInput() {
         // console.log(watch("queryValue"))
         const inputValue = e.input ?? ""
         if (!!inputValue) { console.log(inputValue) }
-        console.log(inputValue)
         if (!inputValue?.includes(watch("queryValue"))) {
           return false
         }
@@ -393,14 +393,12 @@ export default function EstimationInput() {
     }
     // console.log("object")
     if (!!watch("queryId")) {
-
       const productCode = input.product_code1
       if (!productCode.includes(watch("queryId"))) {
         return null
       }
     }
     if (!!watch("queryName")) {
-
       const productName = input.product_name ?? ""
       if (!productName.includes(watch("queryName"))) {
         return null
@@ -468,46 +466,22 @@ export default function EstimationInput() {
     setValue("filterProduct", clearedValues);
   }
 
-  const [analysisView, setAnalysisView] = useState(true)
-
-  const [loadDocId, setLoadDocId] = useState("")
-
-  async function pickupCloudData(docId: string, listOfItem: { index: number; nextOrder: number; cat: string; conversion_unit: number }[]) {
-    console.log(listOfItem)
-    if (listOfItem.length > 0) {
-      for (let i of listOfItem) {
-        const isKitz = i.cat?.includes("KITZ")
-        const unitSpecify = isKitz ? convert(measure.KITZ as any) : convert(measure.OISHI as any)
-        if (unitSpecify == "หิ้ว") {
-          const convertUnit = Math.round(((i.nextOrder || 0) / i.conversion_unit) * 100) / 100
-          setValue(`filterProduct.${i.index}.input`, convertUnit?.toString() ?? "")
-          setValue(`filterProduct.${i.index}.loadedValue`, convertUnit?.toString() ?? "")
-        } else {
-          setValue(`filterProduct.${i.index}.input`, i.nextOrder?.toString() ?? "")
-          setValue(`filterProduct.${i.index}.loadedValue`, i.nextOrder?.toString() ?? "")
-        }
-      }
-      setLoadDocId(docId)
-      alert("เพิ่มข้อมูลสำเร็จ" + " " + docId)
-    }
-    setOpenCloud(false)
-  }
-
-  // finalize
-
   const [openSaveDialog, setOpenSaveDialog] = useState(false)
   const [saving, setSaving] = useState(false)
+
   async function saveEstimation(note: string) {
     setSaving(true)
     let netAmt = 0
     let netUnit = 0
     const savedList = watch("filterProduct").filter(e => !!e.input)
-    // console.log(savedList)
+    console.log(savedList)
+    console.log(pivotTable?.body)
+    const valuesList = pivotTable?.body ?? []
+    const sumList = valuesList.map(e => e?.at(e.length - 1))
     try {
       // console.log(measure)
-
       const savedItem: TSavePayload[] = savedList.map((e, i) => {
-        const unit = +e!.input! || 0
+        const unit = (+e!.input! || 0) - (sumList.at(i) || 0)
         const basicPrice = e.basicPrice || 0
         const cat = e.productcategory!
         const conversion_factor = e.conversion_factor
@@ -528,10 +502,10 @@ export default function EstimationInput() {
           testOrder: e.order_in_bill || 9999,
         }
       })
-      // console.log(savedItem)
+      console.log(savedItem.filter(e => e.nextOrder != 0))
       // console.log(note)
       // console.log(netAmt, netUnit)
-      const result = await saveEstimationDocumentByDocId(documentId, savedItem, {
+      const result = await saveEstimationDocumentByDocId(documentId, savedItem.filter(e => e.nextOrder !== 0), {
         editBy: session.name,
         netamount: netAmt,
         netunits: netUnit,
@@ -542,43 +516,41 @@ export default function EstimationInput() {
         setOpenSaveDialog(false)
         await getReport()
       }
-      // console.log("saving")
     } catch (e) {
       console.log(e)
     } finally {
       setSaving(false)
-      // console.log("object")
     }
   }
 
   return (
     <div className=" 2xl:flex min-h-screen items-start justify-center bg-zinc-50 text-black font-medium overflow-hidden pl-4">
       {openSaveDialog && <DialogSaveEstimation loading={saving} sellingArea={report?.SellingArea?.areaname ?? ""} session={session} docId={documentId} onClose={() => setOpenSaveDialog(false)} submitFn={saveEstimation} note={report?.remark || undefined} />}
-      {openCloud && <DialogPullDataOnCloud productOrderList={watch("filterProduct")} custId={report!.custcode!} onClose={() => { setOpenCloud(false) }} submitFn={pickupCloudData} />}
-      <main className="flex flex-col min-h-screen w-full h-full   items-center   sm:items-start p-8 pt-4 ">
+      <div className="flex flex-col min-h-screen w-[calc(100vw-500px)] h-full   items-center   sm:items-start p-8 pt-4 ">
         <div className="w-full h-20 pl-3 ">
           <div className="flex justify-between items-start">
-            <div className="flex items-center">
+            <div className="flex items-start text-xl ">
               <Link href={"/"}><IoMdArrowRoundBack className="mr-2 text-3xl hover:cursor-pointer" /></Link>
-              <div className="text-3xl">{`ปรับปรุงยอดประมาณการเพื่อสั่งผลิต`}</div>
+              <div>
+                <div className="text-4xl">{`ปรับปรุงยอดประมาณการเพื่อสั่งผลิต`}</div>
+                <div className="font-medium  text-gray-400 text-2xl">{documentId ?? "-"}</div>
+              </div>
             </div>
             <div className="border-2 rounded-xl border-gray-300 flex">
-              <div className=" min-w-50 p-2 border-r border-gray-300 text-center">
-                <div className="text-gray-600 text-xl text-center">{"สายขาย"}</div>
+              <div className=" p-2 border-r border-gray-300 text-center">
+                <div className="text-gray-600 text-xl text-center px-4">{"สายขาย"}</div>
                 <div className="mt-2">{report?.slmname ?? "-"}</div>
               </div>
-              <div className="min-w-50 p-2 text-center">
+              <div className="min-w-50 p-2 text-center border-r-2 border-gray-300">
                 <div className="text-gray-600 text-xl">วันที่ออกทริป</div>
                 <div className="mt-2">  {!!dateRange ? format(dateRange.from, "dd-MM-yyyy") : ""}  -  {!!dateRange ? format(dateRange.to!, "dd-MM-yyyy") : ""}</div>
               </div>
+              <div className="px-4 p-2 text-center">
+                <div className="text-gray-600 text-xl">จำนวนเอกสาร</div>
+                <div className="mt-2">{((pivotTable?.header?.length || 0) - 1)} ใบ</div>
+              </div>
             </div>
             <div className="flex gap-2 min-w-40 justify-end mr-2">
-              {/* <div onClick={() => { setOpenCloud(true) }} className="hover:cursor-pointer p-3 border-gray-600 border rounded-xl flex items-center">
-                <IoCloudDownloadOutline />
-                <span className="ml-2">
-                  ดึงข้อมูลจากระบบ
-                </span>
-              </div> */}
               <div
                 className="hover:cursor-pointer p-3 border-gray-600 border rounded-xl flex items-center"
                 onClick={() => {
@@ -626,7 +598,7 @@ export default function EstimationInput() {
               </div>
               <div className="ml-2 mb-2 select-none">
                 <Tooltip title={"ลบข้อมูลทั้งหมด"}>
-                  <div onClick={clearInputs}
+                  <div onClick={renewData}
                     className="w-10.5 aspect-square flex items-center justify-center   text-xl font-extrabold bg-red-500 text-white rounded-full shadow-md border-red-500 shadow-gray-300 hover:cursor-pointer border-3 ">
                     C
                   </div>
@@ -635,27 +607,21 @@ export default function EstimationInput() {
             </div>
           </div>
         </div>
-        <div className="w-full h-[calc(100vh-250px)] overflow-y-auto " style={{ scrollbarWidth: "none" }}>
-          <table className="table-fixed w-full border-separate border-spacing-0 text-black text-sm">
-
+        <div className=" w-full  h-[calc(100vh-250px)] overflow-x-scroll " style={{ scrollbarWidth: "none" }}>
+          <table className="border-separate border-spacing-0 text-black text-sm ">
             <Header2 headerUnit={headerUnit} mainPick={mainPick} register={register} setValue={setValue} data={pivotTable?.header} />
             <tbody className="w-full divide-y divide-gray-100 ">
               {
-                watch("filterProduct").map((field, i) => {
-                  // console.log(productcode)
-                  const filterObject = filterProductAndReturn(field)
-                  // console.log(filterObject)
-                  if (!filterObject) {
-                    return null
-                  }
-                  if (analysisView) {
-                    const productcode = field.product_code1
-                    // console.log(pivotTable?.body)
-                    const data = pivotTable?.body[productcode]
-                    // console.log(pivotTable?.body["1458"])
-                    // console.log(productcode, data)
+                watch("filterProduct")
+                  .map((field, i) => {
+                    const filterObject = filterProductAndReturn(field)
+                    if (!filterObject) {
+                      return null
+                    }
+                    const data = pivotTable?.body.at(i) ?? []
                     return (
                       <BodyRow2
+                        measure={measure}
                         header={pivotTable?.header ?? []}
                         data={data}
                         setRef={(el: any) => (itemRefs.current[filterObject.product_code1] = el)}
@@ -664,8 +630,7 @@ export default function EstimationInput() {
                         product={filterObject} onKeyDown={(e: any) => handleKeyDown(e, filterObject, selectedList)} index={i}
                       />
                     )
-                  }
-                })
+                  })
               }
             </tbody>
           </table>
@@ -691,8 +656,8 @@ export default function EstimationInput() {
           </div>
           <div className="text-center mt-2">กด shift + ปุ่ม Arrow ด้านซ้าย หรือ ขวา เพื่อเลื่อนตัวกรอง </div>
         </div>
-      </main >
-      <div className="min-w-125 max-w-[50%]  px-6 h-screen bg-gray-50 shadow-2xl">
+      </div >
+      <div className="min-w-125 w-125 max-w-[50%]  px-6 h-screen bg-gray-50 shadow-2xl">
         <div className=" px-10 flex justify-center pt-4">
           <div className="w-full ">
             <div className="grid grid-cols-4 gap-4 mx-auto  text-center text-gray-500 underline ">
@@ -760,17 +725,14 @@ import FormControl from '@mui/material/FormControl';
 import Typography from "@mui/material/Typography";
 import Button from "@mui/material/Button";
 import { IoMdArrowRoundBack } from "react-icons/io";
-import { TbDeviceAnalytics } from "react-icons/tb";
 import { Tooltip } from "@mui/material";
 import { useParams, usePathname, useRouter, useSearchParams } from "next/navigation";
-import { getPivotDataByCustId, TPivotHeader } from "@/action/estimation-document/pivot-table.ts/get";
-import { skip } from "node:test";
 import { getEstimationDocumentDetailByDocname, TEstDetail } from "@/action/estimation-document/detail";
 import { format } from "date-fns";
 import Link from "next/link";
-import DialogPullDataOnCloud from "./component/DialogPullDataOnCloud";
 import DialogSaveEstimation from "./component/DialogSaveEstimation";
 import { saveEstimationDocumentByDocId, TSavePayload } from "@/action/estimation-document/edit";
+import { getPivotDataBySaleWithDateRange, TPivotHeader } from "@/action/estimation-document/fine-tune-document/get";
 
 export function RowRadioButtonsGroup({ value, setValue }: { value: any, setValue: any }) {
   return (
@@ -794,21 +756,14 @@ export function RowRadioButtonsGroup({ value, setValue }: { value: any, setValue
 
 
 function Header2({ mainPick, register, setValue, headerUnit, data }: { data?: TPivotHeader, mainPick: any; register: any; setValue: any; headerUnit: any }) {
-  console.log(data)
-  const summary = data?.at(0) as { grandReturnPercent: number, totalSell: number } | undefined
-  console.log(summary)
-  const columnHeader = data?.slice(1)
-  console.log(columnHeader)
-  const dataLen = columnHeader?.length || 0
-  const skip = 6 - dataLen
-  console.log(skip)
+  const summary = data?.at(data.length - 1) as { grandReturnPercent: number, totalSell: number } | undefined
   return (
-    <thead className={`rounded-xl w-full sticky top-0 ${mainPick == "OISHI" ? "bg-[#e7000b] text-white" : "bg-orange-500"} `} >
+    <thead className={`z-30 rounded-xl w-full sticky top-0 ${mainPick == "OISHI" ? "bg-[#e7000b] text-white" : "bg-orange-500"}`} >
       <tr className='h-10  w-full text-[12px] 2xl:text-[16px] '>
-        <th className='pl-4  px-2 text-start  rounded-tl-xl font-normal w-32.5 '>
-          <div className="py-1 pt-4">
+        <th className='sticky left-0 text-start w-32.5 rounded-tl-xl font-normal'>
+          <div className={`pl-2 w-32.5 px-2  pb-2 pt-4  ${mainPick == "OISHI" ? "bg-[#e7000b] text-white" : "bg-orange-500"} rounded-tl-xl`}>
             <div className="font-extrabold  ">รหัสสินค้า</div>
-            <div className="mt-2 text-black bg-white rounded-xl inline-flex items-center h-10">
+            <div className="mt-2 text-black bg-white rounded-xl inline-flex items-center h-10 ">
               <div className="mx-2"><HiMiniMagnifyingGlass className="text-xl" /></div>
               <TextField
                 autoComplete="off"
@@ -822,8 +777,8 @@ function Header2({ mainPick, register, setValue, headerUnit, data }: { data?: TP
             </div>
           </div>
         </th>
-        <th className='px-2 text-start font-normal min-w-50 '>
-          <div className="py-1 pt-4 ">
+        <th className='z-10 sticky left-32.5  text-start font-normal '>
+          <div className={`pb-2 pt-4 w-52 overflow-x-hidden px-2 ${mainPick == "OISHI" ? "bg-[#e7000b] text-white" : "bg-orange-500"} `}>
             <div className="font-extrabold ">ชื่อสินค้า</div>
             <div className="mt-2 text-black bg-white rounded-xl inline-flex items-center h-10 w-full ">
               <div className="mx-2"><HiMiniMagnifyingGlass className="text-xl" /></div>
@@ -840,67 +795,46 @@ function Header2({ mainPick, register, setValue, headerUnit, data }: { data?: TP
             </div>
           </div>
         </th>
-        <th colSpan={4} className='text-start  font-normal min-w-40'>
-          <div className="py-1 pb-2">
-            <div className="mt-2 font-bold text-black rounded-md bg-white  h-20 w-full grid grid-cols-14 text-[12px]">
-
+        <th colSpan={4} className='z-0  text-start font-normal'>
+          <div className={`py-2  pb-2 `}>
+            <div className={" font-bold text-black rounded-md bg-white  h-20 w-full flex text-[12px] px-2"}>
               {
-                Array.from({ length: 6 }, (_, i) => {
-                  // console.log(skip)
-                  const skipToIndex = skip - 1
-                  // console.log(skipToIndex)
-                  if (i <= skipToIndex) {
-                    return (
-                      <div key={i} className="col-span-2 flex flex-col items-center justify-end py-1 text-[12px] text-gray-500 font-normal" >
-                        <div className="text-black text-[14px] "></div>
-                        <div className="w-full text-center text-black  pb-0.75 text-[14px] ">
-                        </div>
-                        <div className="flex  w-full font-extrabold">
-                          <div className="w-[50%] text-center text-red-500">เสีย</div>
-                          <div className="w-[50%] text-center text-green-800">ขาย</div>
-                        </div>
-                        <div className="flex  w-full font-extrabold border-t border-gray-400">
-                          <div className="w-[50%] text-center text-red-500">{"0"}</div>
-                          <div className="w-[50%] text-center text-green-800">{"0"}</div>
-                        </div>
-                      </div>)
-                  }
-                  const e = columnHeader!.at(i - skip)!
-                  const date = e.date
-                  const docname = e.docname
-                  const ret = e.sumDateReturn
-                  const sell = e.sumDateSell
+                data?.slice(0, data.length - 1)?.map((e, i) => {
+                  const docname = e?.docname
+                  const sell = e?.sumUnits || 0
                   return (
-                    < div key={i} className="col-span-2 flex flex-col items-center justify-end py-1 text-[12px] text-gray-500 font-normal">
-                      <div className="text-black text-[14px]">{date}</div>
-                      <div className="w-full text-center   pb-0.75 text-[12px]  line-clamp-1 font-bold text-blue-700 ">
-                        {docname}
+                    < div key={i} className="flex flex-col items-center justify-end py-1 text-[12px] text-gray-500 font-normal min-w-30 w-30 border-r ">
+                      {/* <div className="text-black text-[14px]">{date}</div> */}
+                      <div className="w-full text-center   pb-0.75 text-[12px]  font-bold text-blue-700 ">
+                        <Tooltip title={docname}>
+                          <div className="pl-2 whitespace-nowrap overflow-clip text-[10px] text-left">
+                            {i + 1}. {docname}
+                          </div>
+                        </Tooltip>
                       </div>
-                      <div className="flex  w-full font-extrabold ">
-                        <div className="w-[50%] text-center text-red-500">เสีย</div>
-                        <div className="w-[50%] text-center text-green-800">ขาย</div>
+                      <div className="text-center font-black text-green-800 min-w-10 h-20   w-30 leading-relaxed   px-0.5">
+                        <Tooltip title={`${e.custcode}:${e.custname}`}>
+                          <div className="line-clamp-2 overflow-hidden whitespace-normal wrap-break-word leading-tight">
+                            {`${e.custcode}:${e.custname}`}
+                          </div>
+                        </Tooltip>
                       </div>
-                      <div className="flex  w-full font-extrabold border-t  border-gray-400">
-                        <div className="w-[50%] text-center text-red-500">{ret}</div>
-                        <div className="w-[50%] text-center text-green-800">{sell}</div>
+                      <div className="flex  w-full font-extrabold border-t  border-gray-400 justify-center">
+                        {sell}
                       </div>
                     </div>
                   )
                 })
               }
-              <div className="text-red-500 flex flex-col items-center justify-end py-1 text-[12px] w-full ">
-                <div className="">%เสีย</div>
-                <div className="border-t border-gray-400  w-full text-center">{summary?.grandReturnPercent! * 100}%</div>
-              </div>
-              <div className="text-green-800 flex flex-col items-center justify-end py-1 text-[12px] w-full">
-                <div>#รวม</div>
+              <div className="text-green-800 flex flex-col items-center justify-end py-1 text-[12px] w-full underline font-bold">
+                <div >รวมทั้งสิ้น</div>
                 <div className="border-t border-gray-400 w-full text-center">{summary?.totalSell}</div>
               </div>
             </div>
           </div>
         </th>
-        <th className='  px-2 text-start  font-normal w-40 rounded-tr-xl'>
-          <div className="py-1 pt-4">
+        <th className='sticky right-0  text-start  font-normal w-40  z-0'>
+          <div className={`pb-2 pt-4 w-36 px-2 ${mainPick == "OISHI" ? "bg-[#e7000b] text-white" : "bg-orange-500"} rounded-tr-xl `}>
             <div className="font-extrabold ">ยอดสั่ง/<span className="underline">{headerUnit}</span></div>
             <div className="text-black mt-2 bg-white rounded-xl inline-flex items-center h-10">
               <div className="mx-2"><HiMiniMagnifyingGlass className="text-xl" /></div>
@@ -922,88 +856,72 @@ function Header2({ mainPick, register, setValue, headerUnit, data }: { data?: TP
   )
 }
 
-function BodyRow2({ header, data, setRef, onKeyDown, product, index, register }: { header: any[]; data: any[] | undefined; setRef: any; onKeyDown: any; product: product_order & { id: string, input: string }; index: number; register: any }) {
-  // console.log(data)
-  // console.log(header.slice(1).map(e => e.docname))
-  const orderDocumentName = header.slice(1).map(e => e.docname)
-  // console.log(orderDocumentName)
-  // !!data && console.log(data)
-  const summary = data?.at(0) as undefined | { returnUnit: number, sellUnit: number, returnPercent: number }
-  // !!summary && console.log(summary)
-  const dataRow = data?.slice(1)
-  const finalBodyWithOrder = orderDocumentName.map(doc => {
-    // console.log(doc)
-    if (dataRow?.find(e => e.docname == doc)) {
-      return dataRow?.find(e => e.docname == doc)
-    }
-    return undefined
-  })
-  const len = orderDocumentName.length
-  const skip = 6 - len
+function convert(measure: "single" | "group") {
+  if (measure == "single") {
+    return "ชิ้น"
+  }
+  return "หิ้ว"
+}
 
-  // console.log(dataRow)
-  // console.log(finalBodyWithOrder)
+function BodyRow2({ measure, header, data, setRef, onKeyDown, product, index, register }: { measure: any; header: any[]; data: any[] | undefined; setRef: any; onKeyDown: any; product: product_order & { id: string, input: string, conversion_factor: number }; index: number; register: any }) {
+  // console.log(data)
   // console.log(product)
-  // console.log(register(`filterProduct.${index}.input`))
-  // console.log(`filterProduct.${index}.input`)
-  console.log(product)
-  const { product_name, product_code1, input } = product
+  const { product_name, product_code1, input, conversion_factor, productcategory } = product
   const { ref: registerRef, ...rest } = register(`filterProduct.${index}.input`);
-  // const dataLen = dataRow?.length || 0
-  // console.log(dataLen)
-  // console.log(((summary?.returnPercent || 0) * 100).toFixed(0))
+  // console.log(input)
+  const isKitz = productcategory?.includes("KITZ")
+
+  const unitSpecify = isKitz ? convert(measure.KITZ as any) : convert(measure.OISHI as any)
+  // console.log(unitSpecify)
+  const diff = unitSpecify == "หิ้ว" ? +(input || "0") - ((data?.at(data.length - 1) || 0) / conversion_factor) : +(input || "0") - (data?.at(data.length - 1) || 0)
+  // console.log(diff)
+  // console.log(data?.at(data.length - 1))
+  // console.log(data?.at(data.length - 1) / conversion_factor)
+  // console.log(conversion_factor)
   return (
-    <tr className="transition-colors focus-within:bg-blue-50 text-[14px] bg-white">
-      <td className=" border-b border-gray-200 pl-3 text-gray-500 ">{product_code1}</td>
-      <td className="border-b border-gray-200 pl-3 truncate ">
-        {product_name}
+    <tr className="transition-colors focus-within:bg-blue-50 text-[14px] bg-white ">
+      <td className="sticky left-0 border-b border-gray-200 pl-3 text-gray-500 z-10 bg-white">{product_code1}</td>
+      <td className="sticky left-32.5 border-b border-gray-200 pl-3 truncate bg-white">
+        <div className="w-49 overflow-hidden">
+          {product_name}
+        </div>
       </td>
-      <td colSpan={4} className="h-full border-b border-gray-200 text-gray-500">
-        <div className="grid grid-cols-14 text-[16px] gap-y-0">
+      <td colSpan={4} className=" h-full border-b border-gray-200 text-gray-500 ">
+        <div className="flex text-[16px] gap-y-0  overflow-hidden pl-2">
           {
-            Array.from({ length: 6 }, (_, i) => {
-              const skipIndex = skip - 1
-              // console.log(skipIndex)
-              if (i <= skipIndex) {
-                return (
-                  <div key={i} className="col-span-2 flex w-full ">
-                    <div className="w-full text-center  text-red-500"></div>
-                    <div className="w-full text-center  border-gray-400"></div>
-                  </div>
-                )
-              }
-              // console.log(i)
-              const d = finalBodyWithOrder?.at(i - skip)
-              // !!d && console.log(d)
+            data?.slice(0, data.length - 1).map((e, i) => {
               return (
-                <div key={i} className="col-span-2 flex w-full text-[16px] ">
-                  <div className="w-full  flex justify-center border-l">
-                    <div className={`text-center  text-red-500 ${!!d?.returnUnit ? "bg-red-500 text-white font-light rounded" : ""}  px-2`}>
-                      {!!d ? d?.returnUnit || "" : ""}
-                    </div>
-                  </div>
-                  <div className="w-full text-center  border-gray-400">{!!d ? d?.sellUnit || "" : ""}</div>
+                <div key={i} className="col-span-2 flex text-[14px] min-w-30 w-30 justify-center border-r">
+                  {unitSpecify == "หิ้ว" ? Math.round(((e || 0) / conversion_factor) * 100) / 100 : e || ""}
                 </div>
               )
             })
           }
-          <div className="col-span-1 text-center bg-gray-100 border-gray-400 text-red-500  rounded-l-sm">{((summary?.returnPercent || 0) * 100).toFixed(0)}%</div>
-          <div className="col-span-1 text-center  bg-gray-100  border-gray-400  rounded-r-sm">{(summary?.sellUnit || 0) + (summary?.returnUnit || 0)}</div>
+          <div className="col-span-1 text-center text-green-800 border-r font-extrabold rounded-l-sm w-20">
+            {unitSpecify == "หิ้ว"
+              ? (data?.at(data.length - 1) / conversion_factor) || "-"
+              : data?.at(data.length - 1)}
+          </div>
         </div>
       </td>
-      <td className="border-b  border-gray-200 px-4 ">
-        <div className="flex items-center h-full py-1">
-          <input
-            autoComplete="off"
-            className="bg-gray-50 w-full border-b border-gray-200 rounded-md 2xl:h-10  pl-4 text-[16px] font-extrabold text-blue-600  "
-            onKeyDown={onKeyDown}
-            ref={(el) => {
-              registerRef(el)
-              setRef(el)
-            }}
-            {...rest}
-            value={input ?? ""}
-          />
+      <td className="sticky right-0 border-b  border-gray-200 px-4 bg-white">
+        <div className="flex items-center h-full py-1 ">
+          <div className="w-16">
+            <input
+              autoComplete="off"
+              className="bg-gray-50 w-full border-b border-gray-200 rounded-md 2xl:h-10  pl-4 text-[16px] font-extrabold text-blue-600  "
+              onKeyDown={onKeyDown}
+              ref={(el) => {
+                registerRef(el)
+                setRef(el)
+              }}
+              {...rest}
+              value={input ?? ""}
+            />
+          </div>
+          <div className={`text-right flex-1   font-extrabold ${diff < 0 ? "text-red-500" : "text-green-700"}`}>
+            {diff < 0 ? "-" : "+"}  {Math.abs(Math.round(diff))}
+          </div>
         </div>
       </td>
     </tr >

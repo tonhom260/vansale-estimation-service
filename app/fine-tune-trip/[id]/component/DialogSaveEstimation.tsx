@@ -35,7 +35,7 @@ type DisplayReport = {
 
 export default function DialogSaveEstimation({ loading, note, onClose, submitFn, docId, session, sellingArea }: { loading: boolean, sellingArea: string; note?: string; onClose: any; submitFn: any; session: any, docId: string }) {
     console.log(session)
-    console.log(sellingArea)
+    // console.log(sellingArea)
     // async function getList() {
     //     const list = await getTeamList({ option: true }) as any[]
     //     console.log(list)
@@ -95,7 +95,7 @@ export default function DialogSaveEstimation({ loading, note, onClose, submitFn,
                 <DialogTitle sx={{}}>
                     <div>
                         <div className='text-center text-3xl mb-3'>
-                            บันทึกประมาณการ
+                            บันทึกประมาณการรวมทริป
                         </div>
                         <div className='flex justify-between mt-4'>
                             <div className='font-medium'>
@@ -119,12 +119,6 @@ export default function DialogSaveEstimation({ loading, note, onClose, submitFn,
                             <TextFieldUseform formData={useform} minRows={4} label='หมายเหตุ' name='note' />
                         </div>
                     </div>
-                    {/* <AutoCompleteUseform required formData={useform} options={team} name='saleman' label='เลือกสายขาย' placeholder='เลือกสายที่เข้าบริการ' />
-                    <AutoCompleteUseform required formData={useform} options={cust} name='custcode' label='เลือกร้านค้า' placeholder='เลือกสายร้านค้า' />
-                    <div className=''>
-                        <div className='text-[14px] mb-1'>เลือกวันที่ออกขาย</div>
-                        <SingleDatePickerWithRangeChadcn formControl={useform} name='datepick' />
-                    </div> */}
                 </DialogContent>
                 <DialogActions sx={{ paddingInline: 3, marginBottom: 0, marginTop: 0 }}>
                     <Button sx={{ borderColor: "gray", color: 'gray', borderRadius: 2 }} fullWidth variant='outlined' onClick={handleClose}>ย้อนกลับ</Button>

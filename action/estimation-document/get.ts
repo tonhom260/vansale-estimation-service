@@ -2,6 +2,7 @@
 
 import { Prisma } from "@/generated/prisma/client"
 import prisma from "@/lib/prisma"
+import { addDays } from "date-fns"
 export type TEstDoc = Prisma.DocumentDetailGetPayload<{
     include: {
         customerDB: { select: { custname: true } },
@@ -26,6 +27,9 @@ export async function getEstimationDocument() {
 
 export async function getEstimationDocumentByDateAndSale({ startTripDate, team }: { startTripDate: Date, team: string }) {
     console.log(startTripDate)
+    const d = new Date(startTripDate)
+    const n = addDays(d, 1)
+    console.log(n)
     try {
 
         const orderPlanByCust = await prisma.documentDetail.findMany({
@@ -35,7 +39,7 @@ export async function getEstimationDocumentByDateAndSale({ startTripDate, team }
             take: 40,
             where: {
                 areacode: team,
-                effectiveDate: startTripDate
+                effectiveDate: n
             }
         })
         console.log(orderPlanByCust)
