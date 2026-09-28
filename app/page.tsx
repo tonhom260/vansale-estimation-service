@@ -10,7 +10,7 @@ import EstDataTable from './component/EstTable';
 import { SingleDatePickerWithRangeChadcn } from '@/useform-components/SingleDatePickerWithRangeChadcn';
 import { useForm } from 'react-hook-form';
 import AutoCompleteUseform from '@/useform-components/AutoCompleteUseform';
-import { format } from 'date-fns';
+import { addDays, format } from 'date-fns';
 import { createEstimationDocument } from '@/action/estimation-document/create';
 import { TUser } from '@/action/user/get';
 import { getTeamList } from '@/action/team/get';
@@ -111,11 +111,12 @@ export default function Main() {
         const saleVal = saleman.value as string
         const custVal = custcode.value as string
         const sellingDate = datepick as Date
+        const eff = addDays(datepick as Date, 1)
         console.log(saleVal, custVal, sellingDate)
         const estDocname = `EST-${saleVal}-${format(sellingDate, "yyyyMMdd")}-${custVal}`
         console.log(estDocname)
         try {
-            const res = await createEstimationDocument({ custcode: custVal, docname: estDocname, effectiveDate: sellingDate, slmname: saleVal, responsible: user!.name! })
+            const res = await createEstimationDocument({ custcode: custVal, docname: estDocname, effectiveDate: eff, slmname: saleVal, responsible: user!.name! })
             // console.log(res)
             if (res) {
                 setOpenCreate(false)
@@ -194,7 +195,7 @@ export default function Main() {
                     </div>
                 </div>
             </div>
-            <div className='w-full h-[calc(100%-130px)] bg-gray-100 mt-6 rounded-xl p-10 overflow-y-auto'>
+            <div className='w-full h-[calc(100%-180px)] bg-gray-100 mt-6 rounded-xl p-10 overflow-y-auto'>
                 <div className='bg-white rounded-xl pt-3 pb-4  px-4 '>
                     <EstDataTable data={report} />
                 </div>

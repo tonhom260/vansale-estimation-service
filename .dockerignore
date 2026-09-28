@@ -1,0 +1,17 @@
+# ไม่ต้องเอา library ที่ลงใน Mac ไป เพราะเราจะไป npm install ใหม่ใน Docker
+node_modules
+
+# ไม่ต้องเอาไฟล์ Git ไป (มักจะใหญ่มาก)
+.git
+.gitignore
+
+# ไม่ต้องเอาโฟลเดอร์ที่ Build เสร็จแล้วบนเครื่องเราไป
+dist
+build
+.next
+out
+
+# ไฟล์ Log และของจุกจิก
+npm-debug.log
+.DS_Store
+*.md

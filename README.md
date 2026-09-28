@@ -4,3 +4,6 @@ mysql -u root -padmin12345 vansale_db -e "INSERT INTO Product_Unit_Conversion (p
 
 tailwind ช่วยจัดการการตัดคำ ในช่อง จะโชว์ทั้งหมด 
  wrap-break-word truncate
+
+
+ ssh -L 3307:172.18.0.2:3309 homesv -N  

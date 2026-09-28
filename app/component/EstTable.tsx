@@ -92,11 +92,35 @@ export const columnsEst: ColumnDef<TEstDoc>[] = [
         cell: ({ row }) => {
             // console.log(row.original.customerDB)
             const customer = row.original.customerDB
-            const custname = customer?.custname ?? ""
+            const custname = customer?.custname ?? "-"
 
             return (
                 < div className="capitalize" > {custname}</div>
             )
+        },
+    },
+    {
+        accessorKey: "effectiveDate" as keyof TEstDoc,
+        header: ({ column }) => {
+            return (
+                <Button
+                    variant="link"
+                    onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+                >
+                    วันที่ลงสินค้า
+                    <ArrowUpDown />
+                </Button>
+            )
+        },
+        cell: ({ row }) => {
+            // console.log(row.original.createAt)
+            // const createDate = new Date(row.original.createAt as any)
+            const eff = new Date(row.original.effectiveDate)
+            console.log(eff)
+            // console.log(createDate)
+            const formated = format(eff, "dd-MM-yyyy")
+            // console.log(formated)
+            return <div className="lowercase pl-4">{formated}</div>
         },
     },
     {
@@ -107,7 +131,7 @@ export const columnsEst: ColumnDef<TEstDoc>[] = [
                     variant="link"
                     onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
                 >
-                    สร้างเมื่อ
+                    วันที่แก้ไข
                     <ArrowUpDown />
                 </Button>
             )
@@ -115,7 +139,6 @@ export const columnsEst: ColumnDef<TEstDoc>[] = [
         cell: ({ row }) => {
             // console.log(row.original.createAt)
             const createDate = new Date(row.original.createAt as any)
-            // console.log(createDate)
             const formated = format(createDate, "dd-MM-yyyy")
             // console.log(formated)
             return <div className="lowercase pl-4">{formated}</div>
@@ -265,7 +288,7 @@ export default function EstDataTable({ data }: { data: any[] }) {
                             console.log(table.getColumn("custname")?.getFilterValue())
                             const col = table.getColumn("custname")
                             console.log(col)
-                            table.getColumn("custname")?.setFilterValue(event.target.value)
+                            table.getColumn("custname")?.setFilterValue(event.target.value?.toLowerCase())
                         }}
                     className="max-w-sm"
                 />

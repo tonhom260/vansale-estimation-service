@@ -21,6 +21,7 @@ export default async function getProductList() {
                     where: { Product_unit: { unit_name: "หิ้ว" } }
                 }
             },
+            orderBy: { order_in_bill: "asc" },
             where: { isActive: true, productcategory: { notIn: ["ASSET", "WASTE", "SPECIALPRODUCT"] } }
         })
         // console.log(productList)

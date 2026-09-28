@@ -22,7 +22,6 @@ export async function getEstimationDocumentDetailByDocname({ docname }: { docnam
                 SellingArea: true,
                 customerDB: { select: { custname: true } },
                 CustomerOrderEstimation: { select: { productcode: true, nextOrder: true, } }
-                // CustomerOrderEstimation: true
             },
         })
         // console.log(orderPlanByDocname?.CustomerOrderEstimation)

@@ -5,8 +5,10 @@ DOCKER_USERNAME := tonhom260
 # TAG := 1.0 # bug fix
 # TAG := 1.1 # เพิ่ม main list page
 # TAG := 1.2 # เพิ่ม main list page
-TAG := 1.3 # เพิ่ม csv download + cloud fetching + set limit compare 
-
+# TAG := 1.3 # เพิ่ม csv download + cloud fetching + set limit compare 
+# TAG := 1.4 # POC ... production 
+# TAG := 1.41 # order in bill ... 
+TAG := 1.42 # ปรับปรุง เพิ่ม category transportation
 DOCKERFILE := Dockerfile
 REGISTRY := docker.io
 PLATFORM := linux/amd64  #
@@ -20,6 +22,7 @@ prune:
 buildx:
 	@echo "Buildx the Docker image and push to repo... $(DOCKER_USERNAME)/$(DOCKER_IMAGE):$(TAG)"	
 	docker buildx build --network host  --push --platform linux/amd64 -t ghcr.io/$(DOCKER_USERNAME)/$(DOCKER_IMAGE):$(TAG) .
+
 clean:
 	@echo "Cleaning up dangling Docker images..."
 	docker image prune -f

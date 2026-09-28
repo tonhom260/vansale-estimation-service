@@ -870,6 +870,7 @@ enum CustomerOrderEstimation_productcategory {
   ASSET
   WASTE
   SPECIALPRODUCT
+  TRANSPORTATION_SERVICE // หมวดค่าขนส่งต่างๆ
 }
 
 enum SellingArea_team {
@@ -894,6 +895,7 @@ enum product_order_productcategory {
   ASSET
   WASTE
   SPECIALPRODUCT
+  TRANSPORTATION_SERVICE // หมวดค่าขนส่งต่างๆ
 }
 
 enum SaleTrip_originWarehouse {
